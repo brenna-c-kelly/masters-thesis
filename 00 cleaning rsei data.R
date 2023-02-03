@@ -1,62 +1,37 @@
 
 library(dplyr)
 
-rsei <- read.csv("rsei modeled county.csv")
+# prep rsei to merge with pop
+rsei <- read.csv("water by county.csv")
+
+# contains all years (2011-2020)
+# contains all media (transfer, air, incineration, water)
+# note: not all counties are included; not all had pollution to model
+#   left join population to rsei score; impute 0 lter for non-polluted counties
+
 names(rsei) <- tolower(names(rsei))
 
-length(unique(rsei$fips)) # 1573 counties were modeled
 rsei$rsei.score <- as.numeric(gsub(",", "", rsei$rsei.score))
+rsei$rsei.score.cancer <- as.numeric(gsub(",", "", rsei$rsei.score.cancer))
+rsei$rsei.score.noncancer <- as.numeric(gsub(",", "", rsei$rsei.score.noncancer))
 
-table(rsei$submission.year) # contains all years
+rsei$fips <- str_pad(rsei$fips, width = 5, pad = "0")
 
-pop_tox <- read.csv("pop_tox.csv")
-
-
-#pop <- select(pop_tox, -c(3:24))
-#pop # ready to merge
-
-head(new)
-table(new$state)
-new_2020 <- new %>%
-  filter(submission.year == 2020) %>%
-  filter(!state %in% c("Hawaii", "Puerto Rico",
-                       "Alaska", "American Samoa",
-                       "Northern Mariana Islands",
-                       "Virgin Islands"))
-new_2020$fips <- str_pad(new_2020$fips, width = 5, pad = "0")
-#getting n trials
-facilities <- data.frame(table(new_2020$tri.facility.id))
-names(facilities) <- c("tri.facility.id", "n")
-facilities_county <- merge(facilities, new_2020, by = "tri.facility.id")
-facilities_county <- facilities_county %>%
-  filter(duplicated(fips) == FALSE)
-
-
-# better data
-by_county <- read.csv("/Users/brenna/Documents/School/Thesis/water by county.csv")
-names(by_county) <- tolower(names(by_county))
-
-summary(by_county)
-by_county$rsei.score <- as.numeric(gsub(",", "", by_county$rsei.score))
-by_county$rsei.score.cancer <- as.numeric(gsub(",", "", by_county$rsei.score.cancer))
-by_county$rsei.score.noncancer <- as.numeric(gsub(",", "", by_county$rsei.score.noncancer))
-
-by_county$fips <- str_pad(by_county$fips, width = 5, pad = "0")
-
-by_county_2020 <- by_county %>%
+rsei_2020 <- rsei %>%
   filter(submission.year == 2020) %>%
   filter(rsei.media == "Direct Water Releases")
 
-nonunique <- data.frame(by_county_2020[duplicated(by_county_2020$fips),])
+# some counties are present more than once (2 in 2020, could be more for other years)
+nonunique <- data.frame(rsei_2020[duplicated(rsei_2020$fips),])
 nonunique_fips <- nonunique$fips
 
 #by_county_2020$nonunique_fips_flag[by_county_2020$fips %in% nonunique_fips] <- "not unique"
 #by_county_2020$nonunique_fips_flag[!by_county_2020$fips %in% nonunique_fips] <- "unique"
 
-fix <- by_county_2020 %>%
+# get only nonunique, to fix
+fix <- rsei_2020 %>%
   filter(fips %in% nonunique_fips)# %>%
   #aggregate(df, list(rsei.score, rsei.score.cancer, rsei.score.noncancer), sum)
-
 
 added <- data.frame("", "", "", "")
 names(added) <- c("rsei.score", "rsei.score.cancer",
@@ -72,43 +47,44 @@ for(i in odd) {
   i = i + 1
 }
 
-impute <- by_county_2020[by_county_2020$fips %in% nonunique_fips, ]
+impute <- rsei_2020[rsei_2020$fips %in% nonunique_fips, ]
 impute <- impute[!duplicated(impute$fips), ]
 impute <- select(impute, -c("rsei.score",
                             "rsei.score.cancer",
                             "rsei.score.noncancer"))
 
-by_county_2020 <- by_county_2020 %>%
+# get only unique fips, to merge with corrected data
+rsei_2020 <- rsei_2020 %>%
   filter(!fips %in% nonunique_fips)
 
 added <- added %>%
   filter(fips != "")
-
 added <- added[with(added, order(fips)), ]
 impute <- impute[with(impute, order(fips)), ]
 
 fixed <- cbind(impute, added)
 fixed <- select(fixed, -c(9))
 
-by_county_2020 <- rbind(by_county_2020, fixed)
+rsei_2020 <- rbind(rsei_2020, fixed)
 
-by_county_2020$rsei.score <- as.numeric(by_county_2020$rsei.score)
-by_county_2020$rsei.score.cancer <- as.numeric(by_county_2020$rsei.score.cancer)
-by_county_2020$rsei.score.noncancer <- as.numeric(by_county_2020$rsei.score.noncancer)
+# make numeric, again
+rsei_2020$rsei.score <- as.numeric(rsei_2020$rsei.score)
+rsei_2020$rsei.score.cancer <- as.numeric(rsei_2020$rsei.score.cancer)
+rsei_2020$rsei.score.noncancer <- as.numeric(rsei_2020$rsei.score.noncancer)
 
-####
-#merging old pop data with new tox data
-names(by_county_2020)
-by_county_2020 <- by_county_2020 %>%
+# remove nonconterminous
+rsei_2020 <- rsei_2020 %>%
   filter(!state %in% c("Alaska", "Hawaii",
-         "Guam", "Puerto Rico",
-         "Virgin Islands"))
+                       "Guam", "Puerto Rico",
+                       "Virgin Islands"))
 
-pop_tox <- st_as_sf(pop_tox)
-aea <-  "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +ellps=GRS80 +datum=NAD83"
-pop_tox <- st_transform(pop_tox, crs = st_crs(aea))
+# merging population data with toxicity data
+pop <- st_read("pop.shp")
 
-pop_tox_2 <- merge(pop_tox, by_county_2020, by.x = "geoid", by.y = "fips", all = TRUE)
+# left join: keep all population data
+pop_tox <- merge(pop, rsei_2020, by.x = "geoid", by.y = "fips", all = TRUE)
+
+
 
 pop_tox_2$rsei.score <- ifelse(is.na(pop_tox_2$rsei.score), 1, pop_tox_2$rsei.score + 1)
 pop_tox_2$rsei.score.cancer <- ifelse(is.na(pop_tox_2$rsei.score.cancer), 1, pop_tox_2$rsei.score.cancer + 1)
@@ -176,10 +152,6 @@ pop_tox_2 <- pop_tox_2 %>%
 
 names(pop_tox_2)
 
-#getting n trials
-pop_tox_n <- merge(pop_tox_2, facilities_county, by.x = "geoid", by.y = "fips", all = TRUE)
-pop_tox_n <- pop_tox_n %>%
-  filter(!is.na(white))
 
 
 
