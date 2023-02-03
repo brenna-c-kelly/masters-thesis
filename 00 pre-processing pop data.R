@@ -1,6 +1,7 @@
 
 library(sf)
 library(dplyr)
+library(viridis)
 library(tidycensus)
 
 # list of variables in acs 5-year file for 2020
