@@ -67,14 +67,6 @@ fixed <- select(fixed, -c(9))
 
 rsei_2020 <- rbind(rsei_2020, fixed)
 
-<<<<<<< HEAD
-=======
-# make numeric, again
-rsei_2020$rsei.score <- as.numeric(rsei_2020$rsei.score)
-rsei_2020$rsei.score.cancer <- as.numeric(rsei_2020$rsei.score.cancer)
-rsei_2020$rsei.score.noncancer <- as.numeric(rsei_2020$rsei.score.noncancer)
-
->>>>>>> ffafc7db77e18e15f52ba2de2e38163ea33e6ba3
 # remove nonconterminous
 rsei_2020 <- rsei_2020 %>%
   filter(!state %in% c("Alaska", "Hawaii",
@@ -87,7 +79,6 @@ pop <- st_read("pop.shp")
 # left join: keep all population data
 pop_tox <- merge(pop, rsei_2020, by.x = "geoid", by.y = "fips", all = TRUE)
 
-<<<<<<< HEAD
 # make numeric, impute 0 for missing
 pop_tox$rsei.score <- as.numeric(ifelse(is.na(pop_tox$rsei.score), 0, 
                                         pop_tox$rsei.score))
@@ -95,113 +86,4 @@ pop_tox$rsei.score.cancer <- as.numeric(ifelse(is.na(pop_tox$rsei.score.cancer),
                                                pop_tox$rsei.score.cancer))
 pop_tox$rsei.score.noncancer <- as.numeric(ifelse(is.na(pop_tox$rsei.score.noncancer), 0, 
                                                   pop_tox$rsei.score.noncancer))
-=======
-
-
-pop_tox_2$rsei.score <- ifelse(is.na(pop_tox_2$rsei.score), 1, pop_tox_2$rsei.score + 1)
-pop_tox_2$rsei.score.cancer <- ifelse(is.na(pop_tox_2$rsei.score.cancer), 1, pop_tox_2$rsei.score.cancer + 1)
-pop_tox_2$rsei.score.noncancer <- ifelse(is.na(pop_tox_2$rsei.score.noncancer), 1, pop_tox_2$rsei.score.noncancer + 1)
-
-pop_tox_2$rsei.score_log <- log(pop_tox_2$rsei.score)
-pop_tox_2$rsei.score.cancer_log <- log(pop_tox_2$rsei.score.cancer)
-pop_tox_2$rsei.score.noncancer_log <- log(pop_tox_2$rsei.score.noncancer)
-
-tm_shape(pop_tox_2) +
-  tm_polygons(col = "black_p")
-
-rsei <- tm_shape(pop_tox_2) +
-  tm_polygons(col = "rsei.score_log", style = "cont", lwd = 0, palette = "plasma")
-rsei.cancer <- tm_shape(pop_tox_2) +
-  tm_polygons(col = "rsei.score.cancer_log", style = "cont", lwd = 0, palette = "plasma")
-rsei.noncancer <- tm_shape(pop_tox_2) +
-  tm_polygons(col = "rsei.score.noncancer_log", style = "cont", lwd = 0, palette = "plasma")
-poc <- tm_shape(pop_tox_2) +
-  tm_polygons(col = "nonwhite_p", style = "cont", lwd = 0, palette = "viridis")
-
-hist(pop_tox_2$black_c_log)
-current.mode <- tmap_mode("plot")
-tmap_arrange(rsei, rsei.cancer, rsei.noncancer, poc,
-             ncol = 2, nrow = 2)
-
-tmap_arrange(rsei.cancer, poc,
-             ncol = 2, nrow = 1)
-
-#### test model
-head(pop_tox_2)
-
-summary(pop_tox_2$pov_p)
-
-(pop_tox_2$pov_p)
-pop_tox_2$pov_c_log <- log(pop_tox_2$pov_p + 0.01) - 
-  log(mean(pop_tox_2$pov_p + 0.01))
-pop_tox_2$nonwhite_c_log <- log(pop_tox_2$nonwhite_p + 0.01) - 
-  log(mean(pop_tox_2$nonwhite_p + 0.01))
-
-# centering, logging
-pop_tox_2 <- pop_tox_2 %>%
-  mutate(black_c_log = log(pop_tox_2$black_p + 0.01) - 
-           log(mean(pop_tox_2$black_p + 0.01))) %>%
-  mutate(aian_p_log = log(pop_tox_2$aian_p + 0.01) - 
-           log(mean(pop_tox_2$aian_p + 0.01))) %>%
-  mutate(asian_p_log = log(pop_tox_2$asian_p + 0.01) - 
-           log(mean(pop_tox_2$asian_p + 0.01))) %>%
-  mutate(nhpi_p_log = log(pop_tox_2$nhpi_p + 0.01) - 
-           log(mean(pop_tox_2$nhpi_p + 0.01))) %>%
-  mutate(tom_p_log = log(pop_tox_2$tom_p + 0.01) - 
-           log(mean(pop_tox_2$tom_p + 0.01))) %>%
-  mutate(other_p_log = log(pop_tox_2$other_p + 0.01) - 
-           log(mean(pop_tox_2$other_p + 0.01))) %>%
-  mutate(black_c = black_p - mean(black_p)) %>%
-  mutate
-(aian_c = aian_p - mean(aian_p)) %>%
-  mutate(asian_c = asian_p - mean(asian_p)) %>%
-  mutate(nhpi_c = nhpi_p - mean(nhpi_p)) %>%
-  mutate(tom_c = tom_p - mean(tom_p)) %>%
-  mutate(other_c = other_p - mean(other_p)) %>%
-  mutate(nonwhite_c = nonwhite_p - mean(nonwhite_p))
-
-  
-
-names(pop_tox_2)
-
-
-
-
-
-xy <- inla(rsei.score.noncancer_bin ~ 1 + f(idarea, model = "bym", graph = g) +
-             nonwhite_c_log*pov_c_log + population_10k_c,
-           #control.inla=list(cmin=0),
-           control.compute = list(dic = TRUE, waic = TRUE),
-           control.predictor = list(compute = TRUE),
-           family = "binomial",
-           #Ntrials = population_10k,
-           data = pop_tox_n)
-summary(xy)
-
-
-
-
-
-
-pop_tox_2$rsei.score.noncancer_bin <- as.factor(pop_tox_2$rsei.score.noncancer_bin)
-
-
-formula.hurdle <- y ~ -1 + Intercept + f(bath.ber, model = "rw1") +
-  f(bath.con, copy="bath.ber",fixed = F) + f(i.ber, model = spde) +
-  f(i.con, model = spde)
-
-formula.joint <- rsei.score.cancer_log ~ population_10k_c +
-  nonwhite_c_log*pov_c_log + 
-  f(idarea, model = "bym", graph = g)
-
-res.jo <- inla(formula.joint, family = c("binomial", "gamma"), 
-               data = inla.stack.data(stk.all), control.family = cff, 
-               control.predictor = list(A = inla.stack.A(stk.all),
-                                        link = link), 
-               control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE,
-                                      config = TRUE),
-               control.results = cres, control.inla = cinla, 
-               control.mode = list(theta = ini.jo, restart = TRUE))
-
->>>>>>> ffafc7db77e18e15f52ba2de2e38163ea33e6ba3
 
