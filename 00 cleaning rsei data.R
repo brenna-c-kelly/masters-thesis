@@ -67,11 +67,6 @@ fixed <- select(fixed, -c(9))
 
 rsei_2020 <- rbind(rsei_2020, fixed)
 
-# make numeric, again
-rsei_2020$rsei.score <- as.numeric(rsei_2020$rsei.score)
-rsei_2020$rsei.score.cancer <- as.numeric(rsei_2020$rsei.score.cancer)
-rsei_2020$rsei.score.noncancer <- as.numeric(rsei_2020$rsei.score.noncancer)
-
 # remove nonconterminous
 rsei_2020 <- rsei_2020 %>%
   filter(!state %in% c("Alaska", "Hawaii",
@@ -83,3 +78,12 @@ pop <- st_read("pop.shp")
 
 # left join: keep all population data
 pop_tox <- merge(pop, rsei_2020, by.x = "geoid", by.y = "fips", all = TRUE)
+
+# make numeric, impute 0 for missing
+pop_tox$rsei.score <- as.numeric(ifelse(is.na(pop_tox$rsei.score), 0, 
+                                        pop_tox$rsei.score))
+pop_tox$rsei.score.cancer <- as.numeric(ifelse(is.na(pop_tox$rsei.score.cancer), 0, 
+                                               pop_tox$rsei.score.cancer))
+pop_tox$rsei.score.noncancer <- as.numeric(ifelse(is.na(pop_tox$rsei.score.noncancer), 0, 
+                                                  pop_tox$rsei.score.noncancer))
+
