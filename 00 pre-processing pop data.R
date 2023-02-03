@@ -44,7 +44,8 @@ pop <- county_vars %>%
   mutate(pov = (b05010_002/total)*100) %>%
   mutate(population_10k = total/10000) %>%
   mutate(nonwhite = ((total - b02001_002)/total)*100) %>%
-  mutate(population_10k_c = population_10k - mean(county_vars$population_10k)) %>% #centering
+  print(mean(population_10k)) 
+  mutate(population_10k_c = population_10k - mean(population_10k)) %>% #centering
   mutate(nonwhite_c = nonwhite - mean(nonwhite)) %>%
   mutate(white_c = white - mean(white)) %>%
   mutate(black_c = black - mean(black)) %>%
