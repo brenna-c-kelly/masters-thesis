@@ -59,41 +59,6 @@ for(i in 2011:2020) {
               b03002_005, b03002_006, b03002_007,
               b03002_008, b03002_009, b03002_012, 
               b05010_002))
-  # log transformed, centered on mean
-  pop$population_10k_lc <- log(pop$population_10k) - 
-    mean(log(pop$population_10k))  
-  pop$nonwhite_lc <- log(pop$nonwhite) - 
-    mean(log(pop$nonwhite))
-  pop$white_lc <- log(pop$white) - 
-    mean(log(pop$white))
-  pop$black_lc <- log(pop$black) - 
-    mean(log(pop$black))
-  pop$aian_lc <- log(pop$aian) - 
-    mean(log(pop$aian))
-  pop$asian_lc <- log(pop$asian) - 
-    mean(log(pop$asian))
-  pop$nhpi_lc <- log(pop$nhpi) - 
-    mean(log(pop$nhpi))
-  pop$other_lc <- log(pop$other) - 
-    mean(log(pop$other))
-  pop$tom_lc <- log(pop$tom) - 
-    mean(log(pop$tom))
-  pop$hisp_lc <- log(pop$hisp) - 
-    mean(log(pop$hisp))
-  pop$pov_lc <- log(pop$pov) - 
-    mean(log(pop$pov))
-  # centering
-  pop$population_10k_c <- pop$population_10k - mean(pop$population_10k)  
-  pop$nonwhite_c <- pop$nonwhite - mean(pop$nonwhite)
-  pop$white_c <- pop$white - mean(pop$white)
-  pop$black_c <- pop$black - mean(pop$black)
-  pop$aian_c <- pop$aian - mean(pop$aian)
-  pop$asian_c <- pop$asian - mean(pop$asian)
-  pop$nhpi_c <- pop$nhpi - mean(pop$nhpi)
-  pop$other_c <- pop$other - mean(pop$other)
-  pop$tom_c <- pop$tom - mean(pop$tom)
-  pop$hisp_c <- pop$hisp - mean(pop$hisp)
-  pop$pov_c <- pop$pov - mean(pop$pov)
   pop$year <- i
   
   if(i %in% c(2011, 2012, 2013, 2014)) {
@@ -103,14 +68,6 @@ for(i in 2011:2020) {
 }
 
 pop_temp = do.call(rbind, datalist)
-#pop_temp <- bind_rows()
-
-getwd()
-
-list.files(path = "data/temporal data", pattern = "\\csv$")
-
-pop_temp <- map(list.files("data/temporal data", full.names = T, pattern = "\\csv$"), read.csv) %>%
-  bind_rows()
 
 pop_temp$geoid <- str_pad(pop_temp$geoid, width = 5, pad = "0")
 
@@ -126,12 +83,12 @@ table(pop_temp$year)
 # for 2018, Rio Arriba County will be averaged between 2017/2019
 rio_arriba <- pop_temp %>%
   filter(geoid == "35039")
-names(rio_arriba)
-rio_arriba_num <- rio_arriba[7:8, 5:28] # only average numeric, only for 2017 & 2019
+
+rio_arriba_num <- rio_arriba[7:8, 4:16] # only average numeric, only for 2017 & 2019
 rio_arriba_2018 <- data.frame(rio_arriba[1, 1], 
                               rio_arriba[1, 2],
                               rio_arriba[1, 3],
-                              rio_arriba[1, 4],
+                              #rio_arriba[1, 4],
                               (rio_arriba_num[1, ] + rio_arriba_num[2, ])/2)
 names(rio_arriba_2018) <- names(rio_arriba)
 # combine with pop_temp data:
@@ -146,17 +103,17 @@ bedford <- pop_temp %>%
   filter(year %in% c(2011, 2012, 2013)) %>%
   filter(geoid %in% c(51515, 51019))
 names(bedford)
-bedford_num <- bedford[, 5:28]
+bedford_num <- bedford[, 4:16]
 names(bedford_num)
-bedford_num[, 2:10] <- (bedford_num[, 2:10]/100) * bedford_num[, 1]
-bedford_num
+bedford_num[, 2:12] <- (bedford_num[, 2:12]/100) * bedford_num$total
+
 bedford_sum <- data.frame(bedford[1, 1],
                           bedford[1, 2],
                           bedford[1, 3],
-                          bedford[1, 4],
+                          #bedford[1, 4],
                           (aggregate(bedford_num[1:11], by = list(group = bedford_num$year), FUN = sum))) %>%
   relocate(group, .after = population_10k)
-names(bedford_sum) <- c(names(pop_temp[1:15]), "year")
+names(bedford_sum) <- c(names(pop_temp[1:14]), "year")
 
 bedford_sum <- bedford_sum %>%
   mutate(nonwhite = ((total - white)/total)*100) %>%
@@ -169,17 +126,17 @@ bedford_sum <- bedford_sum %>%
   mutate(tom = (tom/total)*100) %>%
   mutate(hisp = (hisp/total)*100) %>%
   mutate(pov = (pov/total)*100) %>%
-  mutate(population_10k_c = population_10k - mean(pop$population_10k)) %>%
-  mutate(nonwhite_c = nonwhite - mean(pop$nonwhite)) %>%
-  mutate(white_c = white - mean(pop$white)) %>%
-  mutate(black_c = black - mean(pop$black)) %>%
-  mutate(aian_c = aian - mean(pop$aian)) %>%
-  mutate(asian_c = asian - mean(pop$asian)) %>%
-  mutate(nhpi_c = nhpi - mean(pop$nhpi)) %>%
-  mutate(other_c = other - mean(pop$other)) %>%
-  mutate(tom_c = tom - mean(pop$tom)) %>%
-  mutate(hisp_c = hisp - mean(pop$hisp)) %>%
-  mutate(pov_c = pov - mean(pop$pov)) %>%
+  #mutate(population_10k_c = population_10k - mean(pop$population_10k)) %>%
+  #mutate(nonwhite_c = nonwhite - mean(pop$nonwhite)) %>%
+  #mutate(white_c = white - mean(pop$white)) %>%
+  #mutate(black_c = black - mean(pop$black)) %>%
+  #mutate(aian_c = aian - mean(pop$aian)) %>%
+  #mutate(asian_c = asian - mean(pop$asian)) %>%
+  #mutate(nhpi_c = nhpi - mean(pop$nhpi)) %>%
+  #mutate(other_c = other - mean(pop$other)) %>%
+  #mutate(tom_c = tom - mean(pop$tom)) %>%
+  #mutate(hisp_c = hisp - mean(pop$hisp)) %>%
+  #mutate(pov_c = pov - mean(pop$pov)) %>%
   relocate(year, .after = pov_c)
 
 names(bedford_sum) <- names(pop_temp)
@@ -195,6 +152,45 @@ pop_temp <- pop_temp %>%
   filter(!geoid %in% c(51515, 51019))
 
 pop_temp <- rbind(pop_temp, bedford_all)
+
+
+
+
+# log transformed, centered on mean
+pop_temp$population_10k_lc <- log(pop_temp$population_10k) - 
+  mean(log(pop_temp$population_10k))  
+pop_temp$nonwhite_lc <- log(pop_temp$nonwhite) - 
+  mean(log(pop_temp$nonwhite))
+pop_temp$white_lc <- log(pop_temp$white) - 
+  mean(log(pop_temp$white))
+pop_temp$black_lc <- log(pop_temp$black) - 
+  mean(log(pop_temp$black))
+pop_temp$aian_lc <- log(pop_temp$aian) - 
+  mean(log(pop_temp$aian))
+pop_temp$asian_lc <- log(pop_temp$asian) - 
+  mean(log(pop_temp$asian))
+pop_temp$nhpi_lc <- log(pop_temp$nhpi) - 
+  mean(log(pop_temp$nhpi))
+pop_temp$other_lc <- log(pop_temp$other) - 
+  mean(log(pop_temp$other))
+pop_temp$tom_lc <- log(pop_temp$tom) - 
+  mean(log(pop_temp$tom))
+pop_temp$hisp_lc <- log(pop_temp$hisp) - 
+  mean(log(pop_temp$hisp))
+pop_temp$pov_lc <- log(pop_temp$pov) - 
+  mean(log(pop_temp$pov))
+# centering
+pop_temp$population_10k_c <- pop_temp$population_10k - mean(pop_temp$population_10k)  
+pop_temp$nonwhite_c <- pop_temp$nonwhite - mean(pop_temp$nonwhite)
+pop_temp$white_c <- pop_temp$white - mean(pop_temp$white)
+pop_temp$black_c <- pop_temp$black - mean(pop_temp$black)
+pop_temp$aian_c <- pop_temp$aian - mean(pop_temp$aian)
+pop_temp$asian_c <- pop_temp$asian - mean(pop_temp$asian)
+pop_temp$nhpi_c <- pop_temp$nhpi - mean(pop_temp$nhpi)
+pop_temp$other_c <- pop_temp$other - mean(pop_temp$other)
+pop_temp$tom_c <- pop_temp$tom - mean(pop_temp$tom)
+pop_temp$hisp_c <- pop_temp$hisp - mean(pop_temp$hisp)
+pop_temp$pov_c <- pop_temp$pov - mean(pop_temp$pov)
 
 
 geometry <- get_acs(geography = "county",
@@ -234,6 +230,8 @@ ggplot(pop_temp_geom) +
   )
 
 names(pop_temp_geom)
+
+
 
 
 

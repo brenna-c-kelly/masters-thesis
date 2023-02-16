@@ -1,0 +1,211 @@
+---
+title: "INLA Hurdle Gamma Example"
+author: "Simon Brewer"
+date: "1/30/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+
+```{r message = FALSE, warning=FALSE}
+library(INLA)
+library(ggplot2)
+library(tidyverse)
+```
+
+## Make up some data
+
+- Generate `y`: binary outcomes with fixed probability ($p=0.7$)
+- Convert to Gamma distributed variable by adding appropriate noise with fixed scale ($\theta = 0.4$)
+- Convert to `z`: binary outcome for modeling
+```{r}
+set.seed(1)
+x <- 1:150
+y <- rbinom(length(x), size = 1, prob = 0.7)
+y <- y * rgamma(length(x), shape = 0.4)
+z <- ifelse(y > 0, 1, 0)
+d <- data.frame(x, y, z)
+
+table(pop_tox_2$rsei.score == 0)
+## fix so 1 is 0
+pop_tox_2$rsei.score <- ifelse(pop_tox_2$rsei.score == 1, 0, pop_tox_2$rsei.score - 1)
+pop_tox_2$rsei_bin <- ifelse(pop_tox_2$rsei.score > 0, 1, 0)
+
+pop_tox_2
+```
+
+```{r}
+knitr::kable(head(d))
+```
+
+```{r}
+p <- ggplot(d, aes(x, y, colour = as.factor(z))) + geom_point()
+print(p)
+```
+
+## GLMs 
+
+Make two independent GLMS: binomial (using `z`) and Gamma (using `y`)
+
+```{r}
+m1 <- glm(rsei_bin ~ 1, data = pop_tox_2, family = binomial(link = logit))
+m2 <- glm(rsei.score ~ 1, data = subset(pop_tox_2, rsei_bin == 1),
+          family = Gamma(link = inverse))
+
+hist(test$rsei.score^-1)
+
+hist(d$y)
+hist(log(test$rsei.score))
+
+test <- subset(pop_tox_2, rsei_bin >= 1)
+test_2 <- subset(d, y >= 1)
+test$rsei.score_log <- log(test$rsei.score)
+
+
+summary(test_2$y)
+summary(test$rsei.score)
+m3 <- glm(z ~ 1, data = d, family = binomial(link = logit))
+m4 <- glm(y ~ 1, data = subset(d, z == 1), family = Gamma(link = log))
+
+#check model
+plot(m2, cex = 0.4)
+plot(m4, cex = 0.4)
+
+```
+
+To check if they have recovered the original parameters, we need to back transform the intercepts. First, back-transform the binomial using `plogis()`. Should give a result close to $p = 0.7$:
+
+```{r}
+(bin_coef <- plogis(coef(m1)[[1]]))
+```
+
+Now back transform the Gamma intercept. This is the estimate of scale (should be close to 0.4), and needs `exp()`:
+
+```{r}
+(gamma_coef <- exp(coef(m2)[[1]]))
+```
+
+We can also get confidence intervals on both of these using `confint`:
+
+```{r}
+plogis(confint(m1))
+exp(confint(m2))
+
+hist()
+
+```
+
+## INLA
+
+Now let's run the same models as a joint model in INLA. The data setup requires making a set of duplicate outcomes, the first set will have the binary outcome (`z`) and the second the Gamma (`z`). They will also have matching covariates (here only the intercept estimates). We create a duplicate for each covariates, but using `NA` values for the other outcome. This will probably be clearer when we do it.
+
+- Get the number of obs (we'll need this a lot)
+
+```{r}
+n = nrow(d)
+
+n = nrow(pop_tox_2)
+```
+
+- Next, generate two vectors for the outcomes. Note for the Gamma outcome, all 0's are set to `NA`s:
+
+```{r}
+z = as.vector(pop_tox_2$rsei_bin > 0)
+y = ifelse(z == 1, pop_tox_2$rsei.score, NA)
+
+#z <- as.vector(d$y > 0)
+#y <- ifelse(z == 1, d$y, NA)
+```
+
+- Now generate repeats for the outcomes, by concatenating the values with NA's. As the first model will be the binomial, we concatenate `z`, then `NA`. For the second Gamma model, we concatenate `NA` then `y`:
+
+```{r}
+nothing1 <- rep(NA, n)
+nothing2 <- rep(NA, n)
+
+zNA = as.vector(c(z, nothing1))
+yNA = as.vector(c(nothing2, y))
+```
+
+- Now stick these together in a two-column array:
+
+```{r}
+outcome.matrix <- matrix(c(z, y), ncol = 2)
+outcome.matrix <- matrix(c(zNA, yNA), ncol=2)
+
+print(outcome.matrix)
+```
+
+- Next generate two vectors to capture the intercepts. Again, we concatenate with `NA` values (and use `1`s for the intercept):
+
+```{r}
+# mu = as.factor(c(rep(1,length(z)), rep(2,length(y))))
+mu_z <- c(rep(1, n), nothing1) # Binomial 
+mu_y <- c(nothing2, rep(1, n)) # Gamma 
+```
+
+- Any covariates have to be constructed in the same way. If we have two (`x1` and `x2`):
+
+```{r eval=TRUE}
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+
+x1_z <- c(x1, nothing1) # Binomial 
+x1_y <- c(nothing2, x1) # Gamma 
+
+x2_z <- c(x2, nothing1) # Binomial 
+x2_y <- c(nothing2, x2) # Gamma 
+```
+
+- Now compile the whole thing into a list
+
+```{r}
+data_hg <- list(outcome.matrix = outcome.matrix, 
+                mu_z = mu_z, mu_y = mu_y,
+                x1_z = x1_z, x1_y = x1_y,
+                x2_z = x2_z, x2_y = x2_y)
+```
+
+## Model
+
+```{r}
+f_hg <- outcome.matrix ~ mu_z + mu_y - 1 
+
+res1 <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
+             #control.predictor=list(link=...),
+             verbose=FALSE) 
+
+summary(res1)
+```
+
+
+Now check the INLA estimates of the two parameters. First the binomial ($p=0.7$):
+
+```{r}
+plogis(res1$summary.fixed$mean[1])
+```
+```{r}
+res1$marginals.fixed$mu_z %>%
+  as.data.frame() %>%
+  mutate(x = plogis(x)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line()
+```
+
+And the Gamma ($\theta=0.4$):
+
+```{r}
+exp(res1$summary.fixed$mean[2])
+```
+
+```{r}
+res1$marginals.fixed$mu_y %>%
+  as.data.frame() %>%
+  mutate(x = exp(x)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line()
+```
