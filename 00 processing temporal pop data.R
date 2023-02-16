@@ -11,6 +11,10 @@ vars_acs_20 <- load_variables(20, "acs5", cache = TRUE)
 
 # pulling 2011-2020 ACS estimates and geometry from tidycensus
 
+n = 10
+datalist = vector("list", length = n)
+
+
 for(i in 2011:2020) {
   county_vars <- get_acs(geography = "county",
                          variables = c('B01001_001', 'B03002_003',
@@ -55,6 +59,29 @@ for(i in 2011:2020) {
               b03002_005, b03002_006, b03002_007,
               b03002_008, b03002_009, b03002_012, 
               b05010_002))
+  # log transformed, centered on mean
+  pop$population_10k_lc <- log(pop$population_10k) - 
+    mean(log(pop$population_10k))  
+  pop$nonwhite_lc <- log(pop$nonwhite) - 
+    mean(log(pop$nonwhite))
+  pop$white_lc <- log(pop$white) - 
+    mean(log(pop$white))
+  pop$black_lc <- log(pop$black) - 
+    mean(log(pop$black))
+  pop$aian_lc <- log(pop$aian) - 
+    mean(log(pop$aian))
+  pop$asian_lc <- log(pop$asian) - 
+    mean(log(pop$asian))
+  pop$nhpi_lc <- log(pop$nhpi) - 
+    mean(log(pop$nhpi))
+  pop$other_lc <- log(pop$other) - 
+    mean(log(pop$other))
+  pop$tom_lc <- log(pop$tom) - 
+    mean(log(pop$tom))
+  pop$hisp_lc <- log(pop$hisp) - 
+    mean(log(pop$hisp))
+  pop$pov_lc <- log(pop$pov) - 
+    mean(log(pop$pov))
   # centering
   pop$population_10k_c <- pop$population_10k - mean(pop$population_10k)  
   pop$nonwhite_c <- pop$nonwhite - mean(pop$nonwhite)
@@ -68,11 +95,16 @@ for(i in 2011:2020) {
   pop$hisp_c <- pop$hisp - mean(pop$hisp)
   pop$pov_c <- pop$pov - mean(pop$pov)
   pop$year <- i
+  
   if(i %in% c(2011, 2012, 2013, 2014)) {
     pop$geoid = ifelse(pop$geoid == 46113, 46102, pop$geoid)
   }
-  write.csv(pop, paste("/Users/brenna/Documents/School/Thesis/masters-thesis/data/temporal data/pop_data", i, ".csv", sep = ""))
+  datalist[[i]] <- pop
 }
+
+pop_temp = do.call(rbind, datalist)
+#pop_temp <- bind_rows()
+
 getwd()
 
 list.files(path = "data/temporal data", pattern = "\\csv$")
