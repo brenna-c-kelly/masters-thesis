@@ -103,9 +103,9 @@ bedford <- pop_temp %>%
   filter(year %in% c(2011, 2012, 2013)) %>%
   filter(geoid %in% c(51515, 51019))
 names(bedford)
-bedford_num <- bedford[, 4:16]
+bedford_num <- bedford[, 4:16] # only numeric
 names(bedford_num)
-bedford_num[, 2:12] <- (bedford_num[, 2:12]/100) * bedford_num$total
+bedford_num[, c(2:10, 12)] <- (bedford_num[, c(2:10, 12)]/100) * bedford_num$total
 
 bedford_sum <- data.frame(bedford[1, 1],
                           bedford[1, 2],
@@ -137,13 +137,15 @@ bedford_sum <- bedford_sum %>%
   #mutate(tom_c = tom - mean(pop$tom)) %>%
   #mutate(hisp_c = hisp - mean(pop$hisp)) %>%
   #mutate(pov_c = pov - mean(pop$pov)) %>%
-  relocate(year, .after = pov_c)
+  relocate(year, .after = pov)
 
 names(bedford_sum) <- names(pop_temp)
 
 bedford_clean <- pop_temp %>%
   filter(geoid %in% c(51515, 51019)) %>%
   filter(!year %in% c(2011, 2012, 2013))
+
+bedford_sum
 
 bedford_all <- rbind(bedford_sum, bedford_clean)
 bedford_all
@@ -153,32 +155,56 @@ pop_temp <- pop_temp %>%
 
 pop_temp <- rbind(pop_temp, bedford_all)
 
-
-
+# imputing small value if 0, to prep for log transformation
+#     get the nonzero minimum, for imputation
+pop_temp <- pop_temp %>%
+  mutate(black_z = ifelse(black == 0, min(pop_temp$black[pop_temp$black > 0]),
+                          black + min(pop_temp$black[pop_temp$black > 0]))) %>%
+  mutate(aian_z = ifelse(aian == 0, min(pop_temp$aian[pop_temp$aian > 0]),
+                         aian + min(pop_temp$aian[pop_temp$aian > 0]))) %>%
+  mutate(asian_z = ifelse(asian == 0, min(pop_temp$asian[pop_temp$asian > 0]), 
+                          asian + min(pop_temp$asian[pop_temp$asian > 0]))) %>%
+  mutate(nhpi_z = ifelse(nhpi == 0, min(pop_temp$nhpi[pop_temp$nhpi > 0]), 
+                         nhpi + min(pop_temp$nhpi[pop_temp$nhpi > 0]))) %>%
+  mutate(other_z = ifelse(other == 0, min(pop_temp$other[pop_temp$other > 0]), 
+                          other + min(pop_temp$other[pop_temp$other > 0]))) %>%
+  mutate(tom_z = ifelse(tom == 0, min(pop_temp$tom[pop_temp$tom > 0]), 
+                        tom + min(pop_temp$tom[pop_temp$tom > 0]))) %>%
+  mutate(hisp_z = ifelse(hisp == 0, min(pop_temp$hisp[pop_temp$hisp > 0]), 
+                         hisp + min(pop_temp$hisp[pop_temp$hisp > 0]))) %>%
+  mutate(pov_z = ifelse(pov == 0, min(pop_temp$pov[pop_temp$pov > 0]), 
+                        pov + min(pop_temp$pov[pop_temp$pov > 0]))) %>%
+  mutate(nonwhite_z = ifelse(nonwhite == 0, min(pop_temp$nonwhite[pop_temp$nonwhite > 0]),
+                             nonwhite + min(pop_temp$nonwhite[pop_temp$nonwhite > 0]))) %>%
+  mutate(white_z = ifelse(white == 0, min(pop_temp$white[pop_temp$white > 0]),
+                          white + min(pop_temp$white[pop_temp$white > 0])))
 
 # log transformed, centered on mean
 pop_temp$population_10k_lc <- log(pop_temp$population_10k) - 
   mean(log(pop_temp$population_10k))  
-pop_temp$nonwhite_lc <- log(pop_temp$nonwhite) - 
-  mean(log(pop_temp$nonwhite))
-pop_temp$white_lc <- log(pop_temp$white) - 
-  mean(log(pop_temp$white))
-pop_temp$black_lc <- log(pop_temp$black) - 
-  mean(log(pop_temp$black))
-pop_temp$aian_lc <- log(pop_temp$aian) - 
-  mean(log(pop_temp$aian))
-pop_temp$asian_lc <- log(pop_temp$asian) - 
-  mean(log(pop_temp$asian))
-pop_temp$nhpi_lc <- log(pop_temp$nhpi) - 
-  mean(log(pop_temp$nhpi))
-pop_temp$other_lc <- log(pop_temp$other) - 
-  mean(log(pop_temp$other))
-pop_temp$tom_lc <- log(pop_temp$tom) - 
-  mean(log(pop_temp$tom))
-pop_temp$hisp_lc <- log(pop_temp$hisp) - 
-  mean(log(pop_temp$hisp))
-pop_temp$pov_lc <- log(pop_temp$pov) - 
-  mean(log(pop_temp$pov))
+pop_temp$nonwhite_lc <- log(pop_temp$nonwhite_z) - 
+  mean(log(pop_temp$nonwhite_z))
+pop_temp$white_lc <- log(pop_temp$white_z) - 
+  mean(log(pop_temp$white_z))
+pop_temp$black_lc <- log(pop_temp$black_z) - 
+  mean(log(pop_temp$black_z))
+pop_temp$aian_lc <- log(pop_temp$aian_z) - 
+  mean(log(pop_temp$aian_z))
+pop_temp$asian_lc <- log(pop_temp$asian_z) - 
+  mean(log(pop_temp$asian_z))
+pop_temp$nhpi_lc <- log(pop_temp$nhpi_z) - 
+  mean(log(pop_temp$nhpi_z))
+pop_temp$other_lc <- log(pop_temp$other_z) - 
+  mean(log(pop_temp$other_z))
+pop_temp$tom_lc <- log(pop_temp$tom_z) - 
+  mean(log(pop_temp$tom_z))
+pop_temp$hisp_lc <- log(pop_temp$hisp_z) - 
+  mean(log(pop_temp$hisp_z))
+pop_temp$pov_lc <- log(pop_temp$pov_z) - 
+  mean(log(pop_temp$pov_z))
+
+
+
 # centering
 pop_temp$population_10k_c <- pop_temp$population_10k - mean(pop_temp$population_10k)  
 pop_temp$nonwhite_c <- pop_temp$nonwhite - mean(pop_temp$nonwhite)
@@ -193,12 +219,24 @@ pop_temp$hisp_c <- pop_temp$hisp - mean(pop_temp$hisp)
 pop_temp$pov_c <- pop_temp$pov - mean(pop_temp$pov)
 
 
+write.csv(pop_temp, "data/pop_temp.csv")
+
 geometry <- get_acs(geography = "county",
                        variables = c('B01001_001'),
                        geometry = TRUE,
                        year = 2020)
+
+aea <-  "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +ellps=GRS80 +datum=NAD83"
+geometry <- st_as_sf(geometry, crs = st_crs(aea))
+geometry <- st_transform(geometry, aea)
+
 names(geometry) <- tolower(names(geometry))
 geometry <- select(geometry, -c(name, variable, estimate, moe))
+geometry$state <- substr(geometry$geoid, 1, 2)
+geometry <- geometry %>%
+  filter(!state %in% noncontiguous)
+
+st_write(geometry, "data/geometry.shp")
 
 pop_temp_geom <- merge(geometry, pop_temp, by = "geoid")
 # keep in mind, the dataframe will be reshaped for the model
@@ -209,11 +247,6 @@ pop_temp_geom <- merge(geometry, pop_temp, by = "geoid")
 pop_temp_geom <- st_as_sf(pop_temp_geom)
 aea <-  "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +ellps=GRS80 +datum=NAD83"
 pop_temp_geom <- st_transform(pop_temp_geom, crs = st_crs(aea))
-
-
-pop_temp <- st_as_sf(pop_temp)
-aea <-  "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +ellps=GRS80 +datum=NAD83"
-pop_temp <- st_transform(pop_temp, crs = st_crs(aea))
 
 # figure
 ggplot(pop_temp_geom) + 
@@ -232,8 +265,23 @@ ggplot(pop_temp_geom) +
 names(pop_temp_geom)
 
 
+state_geo <- get_acs(geography = "state",
+                     variables = c('B01001_001'),
+                     geometry = TRUE,
+                     year = 2020)
 
+aea <-  "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +ellps=GRS80 +datum=NAD83"
+state_geo <- st_as_sf(state_geo, crs = st_crs(aea))
+state_geo <- st_transform(state_geo, aea)
 
+names(state_geo) <- tolower(names(state_geo))
+state_geo <- select(state_geo, -c(variable, estimate, moe))
+state_geo$state <- substr(state_geo$geoid, 1, 2)
+state_geo <- state_geo %>%
+  filter(!state %in% noncontiguous)
+tm_shape(state_geo) + tm_polygons()
+
+st_write(state_geo, "data/state_geometry.shp")
 
 #st_write(pop, "pop.shp", append = FALSE)
 
