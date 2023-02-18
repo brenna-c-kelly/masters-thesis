@@ -1,10 +1,13 @@
 
+library(sf)
 library(tmap)
 library(dplyr)
 library(viridis)
 library(ggplot2)
+library(stringr)
 library(corrplot)
 library(gghighlight)
+library(wesanderson)
 library(RColorBrewer)
 
 # figures for exploration, possibly methods, descriptive results, discussion 
@@ -188,16 +191,18 @@ tm_shape(dat) +
 year_epa <- aggregate(dat$rsei.score, by = list(dat$epa_region, dat$year), FUN = mean)
 year_epa$Group.1 <- as.factor(year_epa$Group.1)
 pal <- wes_palette("Zissou1", n = 10, type = "continuous")
+head(year_epa)
+names(year_epa) <- c("EPA Region", "Year", "Mean Pollution")
 
-g <- ggplot(year_epa, aes(x = `Group.2`, y = `x`, group = `Group.1`, colour = `Group.1`))+#,
+g <- ggplot(year_epa, aes(x = `Year`, y = `Mean Pollution`, group = `EPA Region`, colour = `EPA Region`))+#,
                      #group = `Group.1`, fill = as.factor(`Group.1`))) +
-  geom_line() +
+  geom_line(aes(linewidth = `Mean Pollution`/3000)) +
   scale_color_manual(values = pal) +
   geom_point( size = 2) + theme_bw() + 
   scale_fill_manual(values = pal_vals)
 g <- g + theme(legend.position = "none")
 g + gghighlight(Group.1 == c("8"))
-
+summary(year_epa$x)
 pal_vals <- pal[1:10]
 
 library(wesanderson)
