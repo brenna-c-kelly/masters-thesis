@@ -231,7 +231,7 @@ geometry <- st_as_sf(geometry, crs = st_crs(aea))
 geometry <- st_transform(geometry, aea)
 
 names(geometry) <- tolower(names(geometry))
-geometry <- select(geometry, -c(name, variable, estimate, moe))
+geometry <- select(geometry, -c(variable, estimate, moe))
 geometry$state <- substr(geometry$geoid, 1, 2)
 geometry <- geometry %>%
   filter(!state %in% noncontiguous)
