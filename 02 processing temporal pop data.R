@@ -238,7 +238,6 @@ geometry <- geometry %>%
 
 st_write(geometry, "data/geometry.shp")
 
-pop_temp_geom <- merge(geometry, pop_temp, by = "geoid")
 # keep in mind, the dataframe will be reshaped for the model
 # geometry will only be used once, to make the graph
 # inla will use the id associated with the geometry
