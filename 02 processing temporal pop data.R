@@ -7,13 +7,54 @@ library(tidyverse)
 library(tidycensus)
 
 # list of variables in acs 5-year file for 2020
-vars_acs_20 <- load_variables(20, "acs5", cache = TRUE)
+vars_acs_20 <- load_variables(2020, "acs5", cache = TRUE)
 
 # pulling 2011-2020 ACS estimates and geometry from tidycensus
 
 n = 10
 datalist = vector("list", length = n)
 
+disability_vars <- get_acs(geography = "county",
+                           variables = c("B19083_001"),
+                           geometry = FALSE,
+                           year = 2020) %>%
+  group_by(GEOID) %>%
+  spread(variable, estimate) %>%
+  drop_na() #%>%
+
+ginilist = vector("list", length = 10)
+for(i in 2011:2020) {
+  gini <- get_acs(geography = "county",
+                  variables = c("B19083_001"),
+                  geometry = FALSE,
+                  year = i) %>%
+    group_by(GEOID) %>%
+    spread(variable, estimate) %>%
+    select(-moe) %>%
+    drop_na()
+  # tidying
+  names(gini) <- tolower(names(gini))
+  gini$state <- substr(gini$geoid, start = 0, stop = 2)
+  noncontiguous <- c("02", "15", "72") # excluding AK, HI, PR
+  gini <- gini %>%
+    filter(!state %in% noncontiguous)
+  gini$year <- i
+  
+  if(i %in% c(2011, 2012, 2013, 2014)) {
+    gini$geoid = ifelse(gini$geoid == 46113, 46102, gini$geoid)
+  }
+  ginilist[[i]] <- gini
+}
+
+ginilist = do.call(rbind, ginilist)
+ginilist$gini <- ginilist$b19083_001
+
+geoids <- data.frame(table(ginilist$geoid))
+subset(!pop_tox$geoid %in% geoids$Var1)
+subset(pop_tox, !(geoid %in% geoids$Var1))
+subset(geoids, !(Var1 %in% pop_tox$geoid))
+
+head(ginilist)
 
 for(i in 2011:2020) {
   county_vars <- get_acs(geography = "county",
@@ -73,6 +114,8 @@ pop_temp$geoid <- str_pad(pop_temp$geoid, width = 5, pad = "0")
 
 table(pop_temp$year)
 
+pop_temp <- cbind(pop_temp, ginilist$gini)
+names(pop_temp)[17] <- "gini"
 
 # 2011-2013 have unique matches
 
@@ -84,7 +127,7 @@ table(pop_temp$year)
 rio_arriba <- pop_temp %>%
   filter(geoid == "35039")
 
-rio_arriba_num <- rio_arriba[7:8, 4:16] # only average numeric, only for 2017 & 2019
+rio_arriba_num <- rio_arriba[7:8, 4:17] # only average numeric, only for 2017 & 2019
 rio_arriba_2018 <- data.frame(rio_arriba[1, 1], 
                               rio_arriba[1, 2],
                               rio_arriba[1, 3],
@@ -103,17 +146,20 @@ bedford <- pop_temp %>%
   filter(year %in% c(2011, 2012, 2013)) %>%
   filter(geoid %in% c(51515, 51019))
 names(bedford)
-bedford_num <- bedford[, 4:16] # only numeric
+bedford_num <- bedford[, 4:17] # only numeric
 names(bedford_num)
 bedford_num[, c(2:10, 12)] <- (bedford_num[, c(2:10, 12)]/100) * bedford_num$total
+
 
 bedford_sum <- data.frame(bedford[1, 1],
                           bedford[1, 2],
                           bedford[1, 3],
                           #bedford[1, 4],
-                          (aggregate(bedford_num[1:11], by = list(group = bedford_num$year), FUN = sum))) %>%
-  relocate(group, .after = population_10k)
-names(bedford_sum) <- c(names(pop_temp[1:14]), "year")
+                          (aggregate(bedford_num[1:11], by = list(group = bedford_num$year), FUN = sum)),
+                          (aggregate(bedford_num[, "gini"], by = list(group = bedford_num$year), FUN = mean))) %>%
+  relocate(group, .after = population_10k) %>%
+  select(-group.1)
+names(bedford_sum) <- c(names(pop_temp[1:14]), "year", "gini")
 
 bedford_sum <- bedford_sum %>%
   mutate(nonwhite = ((total - white)/total)*100) %>%
@@ -137,7 +183,8 @@ bedford_sum <- bedford_sum %>%
   #mutate(tom_c = tom - mean(pop$tom)) %>%
   #mutate(hisp_c = hisp - mean(pop$hisp)) %>%
   #mutate(pov_c = pov - mean(pop$pov)) %>%
-  relocate(year, .after = pov)
+  relocate(year, .after = nonwhite) %>%
+  relocate(gini, .after = year)
 
 names(bedford_sum) <- names(pop_temp)
 
@@ -181,27 +228,27 @@ pop_temp <- pop_temp %>%
 
 # log transformed, centered on mean
 pop_temp$population_10k_lc <- log(pop_temp$population_10k) - 
-  mean(log(pop_temp$population_10k))  
+  log(mean(pop_temp$population_10k))  
 pop_temp$nonwhite_lc <- log(pop_temp$nonwhite_z) - 
-  mean(log(pop_temp$nonwhite_z))
+  log(mean(pop_temp$nonwhite_z))
 pop_temp$white_lc <- log(pop_temp$white_z) - 
-  mean(log(pop_temp$white_z))
+  log(mean(pop_temp$white_z))
 pop_temp$black_lc <- log(pop_temp$black_z) - 
-  mean(log(pop_temp$black_z))
+  log(mean(pop_temp$black_z))
 pop_temp$aian_lc <- log(pop_temp$aian_z) - 
-  mean(log(pop_temp$aian_z))
+  log(mean(pop_temp$aian_z))
 pop_temp$asian_lc <- log(pop_temp$asian_z) - 
-  mean(log(pop_temp$asian_z))
+  log(mean(pop_temp$asian_z))
 pop_temp$nhpi_lc <- log(pop_temp$nhpi_z) - 
-  mean(log(pop_temp$nhpi_z))
+  log(mean(pop_temp$nhpi_z))
 pop_temp$other_lc <- log(pop_temp$other_z) - 
-  mean(log(pop_temp$other_z))
+  log(mean(pop_temp$other_z))
 pop_temp$tom_lc <- log(pop_temp$tom_z) - 
-  mean(log(pop_temp$tom_z))
+  log(mean(pop_temp$tom_z))
 pop_temp$hisp_lc <- log(pop_temp$hisp_z) - 
-  mean(log(pop_temp$hisp_z))
+  log(mean(pop_temp$hisp_z))
 pop_temp$pov_lc <- log(pop_temp$pov_z) - 
-  mean(log(pop_temp$pov_z))
+  log(mean(pop_temp$pov_z))
 
 
 
@@ -217,6 +264,7 @@ pop_temp$other_c <- pop_temp$other - mean(pop_temp$other)
 pop_temp$tom_c <- pop_temp$tom - mean(pop_temp$tom)
 pop_temp$hisp_c <- pop_temp$hisp - mean(pop_temp$hisp)
 pop_temp$pov_c <- pop_temp$pov - mean(pop_temp$pov)
+pop_temp$gini_c <- pop_temp$gini - mean(pop_temp$gini)
 
 
 write.csv(pop_temp, "data/pop_temp.csv")

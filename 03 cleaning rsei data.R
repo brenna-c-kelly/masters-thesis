@@ -151,6 +151,8 @@ pop_tox$rsei_score_bin <- ifelse(pop_tox$rsei.score == 0, 0, 1)
 pop_tox$rsei_cancer_bin <- ifelse(pop_tox$rsei.score.cancer == 0, 0, 1)
 pop_tox$rsei_noncancer_bin <- ifelse(pop_tox$rsei.score.noncancer == 0, 0, 1)
 
+write.csv(pop_tox, "data/pop_tox_merged.csv")
+
 summary(pop_tox$rsei_noncancer_bin)
 
 # reshaping for visualization

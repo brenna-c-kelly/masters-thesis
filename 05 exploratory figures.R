@@ -98,36 +98,46 @@ g + gghighlight(geoid == c("49035", "49049"))
 library(plotly)
 ggplotly(g)
 
-texas <- dat %>%
-  filter(state == "48")
-utah <- dat %>%
-  filter(state == "49")
-alabama <- dat %>%
-  filter(state == "01")
-tn <- dat %>%
-  filter(state == "47")
-ny <- dat %>%
-  filter(state %in% "36")
 
 epa <- read.csv("data/epa regions.csv")
 names(epa) <- tolower(names(epa))
 epa_regions <- split(epa, epa$epa.region)
 
-dat <- dat %>%
-  mutate(epa_region = case_when(state %in% epa_regions$`1`$state.code ~ 1,
-                                state %in% epa_regions$`2`$state.code ~ 2,
-                                state %in% epa_regions$`3`$state.code ~ 3,
-                                state %in% epa_regions$`4`$state.code ~ 4,
-                                state %in% epa_regions$`5`$state.code ~ 5,
-                                state %in% epa_regions$`6`$state.code ~ 6,
-                                state %in% epa_regions$`7`$state.code ~ 7,
-                                state %in% epa_regions$`8`$state.code ~ 8,
-                                state %in% epa_regions$`9`$state.code ~ 9,
-                                state %in% epa_regions$`10`$state.code ~ 10,
-                                state %in% epa_regions$`25`$state.code ~ 25))
+# epa-pop_tox
+pop_tox$state.x <- str_pad(pop_tox$state.x, 2, pad = "0")
+epa$county.code <- str_pad(epa$county.code, 3, pad = "0")
+epa$geoid <- paste0(epa$state.code, epa$county.code, sep = "")
 
+pop_tox <- pop_tox %>%
+  mutate(epa_region = case_when(state.x %in% epa_regions$`1`$state.code ~ "1",
+                                state.x %in% epa_regions$`2`$state.code ~ "2",
+                                state.x %in% epa_regions$`3`$state.code ~ "3",
+                                state.x %in% epa_regions$`4`$state.code ~ "4",
+                                state.x %in% epa_regions$`5`$state.code ~ "5",
+                                state.x %in% epa_regions$`6`$state.code ~ "6",
+                                state.x %in% epa_regions$`7`$state.code ~ "7",
+                                state.x %in% epa_regions$`8`$state.code ~ "8",
+                                state.x %in% epa_regions$`9`$state.code ~ "9",
+                                state.x %in% epa_regions$`10`$state.code ~ "10",
+                                state.x %in% epa_regions$`25`$state.code ~ "25")) %>%
+  mutate(epa_region = as.character(epa_region))
+pop_tox <- pop_tox %>%
+  mutate(epa_region = case_when(state.x %in% epa_regions$`1`$state.code ~ "one",
+                                state.x %in% epa_regions$`2`$state.code ~ "two",
+                                state.x %in% epa_regions$`3`$state.code ~ "three",
+                                state.x %in% epa_regions$`4`$state.code ~ "four",
+                                state.x %in% epa_regions$`5`$state.code ~ "five",
+                                state.x %in% epa_regions$`6`$state.code ~ "six",
+                                state.x %in% epa_regions$`7`$state.code ~ "seven",
+                                state.x %in% epa_regions$`8`$state.code ~ "eight",
+                                state.x %in% epa_regions$`9`$state.code ~ "nine",
+                                state.x %in% epa_regions$`10`$state.code ~ "ten",
+                                state.x %in% epa_regions$`25`$state.code ~ "twenty-five")) %>%
+  mutate(epa_region = as.character(epa_region))
 
-
+test <- split(pop_tox, pop_tox$epa_region)
+summary(test$ten$rsei.score)
+summary(one$rsei.score)
 table(tn$county)
 
 states <- unique(dat$state)
