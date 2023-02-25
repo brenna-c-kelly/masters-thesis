@@ -8,8 +8,9 @@ library(regclass)
 library(tidyverse)
 
 ## data
-pop_tox <- read.csv("masters-thesis/data/pop_tox_merged.csv")
+pop_tox <- read.csv("data/pop_tox_merged.csv")
 
+pop_tox$state.x <- str_pad(pop_tox$state.x, 2, pad = "0")
 pop_tox$geoid <- str_pad(pop_tox$geoid, 5, pad = 0)
 
 pop_tox$idarea <- as.numeric(as.factor(pop_tox$geoid))
@@ -18,10 +19,10 @@ pop_tox$idtime <- 1 + pop_tox$year - min(pop_tox$year)
 
 # glms
 m1 <- glm(rsei_score_bin ~ population_10k_lc +
-            black_lc*pov_lc + aian_lc*pov_lc + 
-            asian_lc*pov_lc + nhpi_lc*pov_lc + 
-            other_lc*pov_lc + tom_lc*pov_lc +
-            hisp_lc*pov_lc + pov_lc*pov_lc + 
+            black_lc + aian_lc + pov_lc + epa_region +
+            asian_lc + nhpi_lc + 
+            other_lc + tom_lc +
+            hisp_lc + pov_lc + 
             gini_c, 
           data = pop_tox, family = binomial(link = logit))
 m2 <- glm(rsei.score ~ population_10k_lc +
@@ -71,13 +72,14 @@ x_his <- pop_tox$hisp_lc
 x_pov <- pop_tox$pov_lc
 x_pop <- pop_tox$population_10k_lc
 x_gin <- pop_tox$gini_c
+x_epa <- pop_tox$epa_region
 
 ## Create index vectors
 id_space <- pop_tox$idarea
 id_time <- pop_tox$idtime
 
 ## Queens case
-geometry <- st_read("masters-thesis/data/geometry.shp")
+geometry <- st_read("data/geometry.shp")
 dat_nb <- poly2nb(geometry)
 
 ## Write to file
@@ -126,6 +128,9 @@ x_pop_y <- c(nothing2, x_pop) # Gamma
 x_gin_z <- c(x_gin, nothing1) # Binomial
 x_gin_y <- c(nothing2, x_gin) # Gamma
 
+x_epa_z <- c(x_epa, nothing1) # Binomial
+x_epa_y <- c(nothing2, x_epa) # Gamma
+
 # list
 data_hg <- list(outcome.matrix = outcome.matrix, 
                 id_space_z = id_space_z, id_space_y = id_space_y,
@@ -142,7 +147,8 @@ data_hg <- list(outcome.matrix = outcome.matrix,
                 x_his_z = x_his_z, x_his_y = x_his_y,
                 x_pov_z = x_pov_z, x_pov_y = x_pov_y,
                 x_pop_z = x_pop_z, x_pop_y = x_pop_y,
-                x_gin_z = x_gin_z, x_gin_y = x_gin_y)
+                x_gin_z = x_gin_z, x_gin_y = x_gin_y,
+                x_epa_z = x_epa_z, x_epa_y = x_epa_y)
 
 # inla
 f_hg <- outcome.matrix ~ 
@@ -152,22 +158,28 @@ f_hg <- outcome.matrix ~
   #id_time_z + id_time_y +
   f(id_time_z, model = "iid") + 
   f(id_time_y, model = "iid") + 
+  x_epa_z + x_epa_y +
   # intercepts
   mu_z + mu_y + 
   #f(x_epa_z, model = "iid") + f(x_epa_y, model = "iid") +
   # 10k population
-  x_pop_z*x_gin_z + x_pop_y*x_gin_y +
+  x_pop_z + x_pop_y +
   # inequality index
-  # +  +
+  x_pov_z + x_gin_z + x_pov_y + x_gin_y +
+   #+  +
   # race covariates
-  #x_bla_z + x_pov_z + x_bla_y + x_pov_y + x_aia_z + x_aia_y +
-  #x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
-  #x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
-  #x_his_z  + x_his_y - 1
-  x_bla_z + x_bla_y*x_pov_y + x_aia_z + x_aia_y*x_pov_y +
-  x_asi_z + x_asi_y*x_pov_y + x_nhp_z + x_nhp_y*x_pov_y + 
-  x_tom_z + x_tom_y*x_pov_y + x_oth_z + x_oth_y*x_pov_y + 
-  x_his_z  + x_his_y*x_pov_y + x_pov_z - 1
+  #x_bla_z*x_pov_z + x_bla_y*x_pov_y + x_aia_z*x_pov_z + x_aia_y*x_pov_y +
+  #x_asi_z*x_pov_z + x_asi_y*x_pov_y + x_nhp_z*x_pov_z + x_nhp_y*x_pov_y + 
+  #x_tom_z*x_pov_z + x_tom_y*x_pov_y + x_oth_z*x_pov_z + x_oth_y*x_pov_y + 
+  #x_his_z*x_pov_z  + x_his_y*x_pov_y - 1 +
+  x_bla_z + x_bla_y + x_aia_z + x_aia_y +
+  x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
+  x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
+  x_his_z + x_his_y - 1
+  #x_bla_z*x_pov_z*x_gin_z + x_bla_y*x_pov_y*x_gin_y + x_aia_z*x_pov_z*x_gin_z + x_aia_y*x_pov_y*x_gin_y +
+  #x_asi_z*x_pov_z*x_gin_z + x_asi_y*x_pov_y*x_gin_y + x_nhp_z*x_pov_z*x_gin_z + x_nhp_y*x_pov_y*x_gin_y + 
+  #x_tom_z*x_pov_z*x_gin_z + x_tom_y*x_pov_y*x_gin_y + x_oth_z*x_pov_z*x_gin_z + x_oth_y*x_pov_y*x_gin_y + 
+  #x_his_z*x_pov_z*x_gin_z  + x_his_y*x_pov_y*x_gin_y - 1
 #x_bla_z*x_pov_z + x_bla_y + x_aia_z*x_pov_z + x_aia_y +
 #x_asi_z*x_pov_z + x_asi_y + x_nhp_z*x_pov_z + x_nhp_y + 
 #x_tom_z*x_pov_z + x_tom_y + x_oth_z*x_pov_z + x_oth_y + 
@@ -175,8 +187,9 @@ f_hg <- outcome.matrix ~
 # poverty
 #x_pov_z + x_pov_y
 
-res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
+res1 <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
             control.compute = list(dic = TRUE, waic = TRUE),
+            control.inla= list(int.strategy = "eb"),
             #control.family = c("logit", "inverse"),
             verbose=FALSE)
 # s, t, intercept     150043.97
@@ -190,8 +203,13 @@ res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
 #add redlining? epa region? gini index
 
 summary(res)
+summary(res1)
 
-#round(exp(res$summary.fixed), 2)
+rowid <- which(res1$summary.random$country == "Japan")
+res1$summary.random$country[rowid, ]
+
+
+print(round(exp(res1$summary.fixed), 2))
 round(res$summary.fixed, 2)
 
 # st, all fx      12096439.43
@@ -203,7 +221,18 @@ round(res$summary.fixed, 2)
 # y intx, gini     8863133.09
 # z intx, gini     9048832.47
 # zintx, gini*pop  8783139.27
+# yintx, gini      8894685.23
+# no gini intx     8794990.91
 
+# 10146104.81
+# 10492125.86
+# 10318401.91
+#  9874002.64
+# 10234039.15
+# 10014701.88 pov*gini + race
+# 10164861.91 no interactions < use
+#  9382592.97 no interactions, epa <- use
+#   125285.42 no interactions, epa (cleaned)
 
 # plots
 plot(res, plot.fixed.effects = TRUE,
@@ -246,5 +275,7 @@ res$marginals.fixed$x_gin_y %>%
   mutate(x = plogis(x)) %>%
   ggplot(aes(x = x, y = y)) +
   geom_line()
+
+save(res, file = "inla_results.RData")
 
 
