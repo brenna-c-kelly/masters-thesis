@@ -3,6 +3,8 @@
 library(sf)
 library(INLA)
 library(spdep)
+library(broom)
+library(ggExtra)
 library(ggplot2)
 library(regclass)
 library(tidyverse)
@@ -71,7 +73,7 @@ x_oth <- pop_tox$other_lc
 x_his <- pop_tox$hisp_lc
 x_pov <- pop_tox$pov_lc
 x_pop <- pop_tox$population_10k_lc
-x_gin <- pop_tox$gini_c
+x_gin <- (pop_tox$gini_c*100)/10
 x_epa <- pop_tox$epa_region
 
 ## Create index vectors
@@ -158,7 +160,7 @@ f_hg <- outcome.matrix ~
   #id_time_z + id_time_y +
   f(id_time_z, model = "iid") + 
   f(id_time_y, model = "iid") + 
-  x_epa_z + x_epa_y +
+  #x_epa_z + x_epa_y +
   # intercepts
   mu_z + mu_y + 
   #f(x_epa_z, model = "iid") + f(x_epa_y, model = "iid") +
@@ -187,7 +189,7 @@ f_hg <- outcome.matrix ~
 # poverty
 #x_pov_z + x_pov_y
 
-res1 <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
+res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
             control.compute = list(dic = TRUE, waic = TRUE),
             control.inla= list(int.strategy = "eb"),
             #control.family = c("logit", "inverse"),
@@ -207,10 +209,12 @@ summary(res1)
 
 rowid <- which(res1$summary.random$country == "Japan")
 res1$summary.random$country[rowid, ]
+summary(res1)
+summary(res)
 
-
-print(round(exp(res1$summary.fixed), 2))
-round(res$summary.fixed, 2)
+print(round(exp(res$summary.fixed), 3))
+print(res$summary.fixed)
+round(res$summary.fixed, 3)
 
 # st, all fx      12096439.43
 # all fx            141713.54
@@ -233,12 +237,14 @@ round(res$summary.fixed, 2)
 # 10164861.91 no interactions < use
 #  9382592.97 no interactions, epa <- use
 #   125285.42 no interactions, epa (cleaned)
+# 10297035.52 no intx, gini
 
 # plots
 plot(res, plot.fixed.effects = TRUE,
      plot.random.effects = FALSE,
      plot.hyperparameters = FALSE,
      plot.predictor = FALSE, cex = 1.25)
+
 
 #intercepts
 res$marginals.fixed$mu_z %>%
@@ -249,12 +255,116 @@ res$marginals.fixed$mu_z %>%
 plogis(res$summary.fixed$mean[1])
 round(res$summary.fixed, 2)
 
-res$marginals.fixed$mu_y %>%
+inla.dmarginal(0, res$marginals.fixed$x_gin_y)
+
+inla.hpdmarginal(0.90, res$marginals.fixed$x_gin_y)[2]
+
+pal <- wes_palette("Zissou1", n = 10, type = "continuous")
+v_colors =  viridis(q_colors, )
+col = viridis(22, option = "plasma")
+
+test <- data.frame(inla.smarginal(res$marginals.fixed$x_gin_y))
+test$ci <- "100%"
+test$ci[test$x > inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[1] &
+          test$x < inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[2]] <- "99%"
+test$ci[test$x > inla.hpdmarginal(0.95, res$marginals.fixed$x_gin_y)[1] &
+          test$x < inla.hpdmarginal(0.95, res$marginals.fixed$x_gin_y)[2]] <- "95%"
+test$ci[test$x > inla.hpdmarginal(0.90, res$marginals.fixed$x_gin_y)[1] &
+          test$x < inla.hpdmarginal(0.90, res$marginals.fixed$x_gin_y)[2]] <- "90%"
+
+
+test_90 <- test %>%
+  filter(ci == "90%")
+test_99 <- test %>%
+  filter(ci == "99%")
+ggplot(test_99, aes(x = x, y = y)) +
+  geom_line(alpha = 0) +
+  geom_area(aes(fill = x), alpha = 0.5)# +
+  geom_line(test_90, mapping = aes(x = x, y = y), alpha = 0) +
+  geom_area(, alpha = 0.5)
+
+inla.smarginal(res$marginals.fixed$x_gin_y) %>% # smoothed
   as.data.frame() %>%
+  #split(by = ci)
   mutate(x = exp(x)) %>%
   ggplot(aes(x = x, y = y)) +
-  geom_line()
+  geom_line(alpha = 1) +
+  #geom_area(aes(fill = ci, alpha = 0.5), palette = "plasma") +
+  #geom_hline(yintercept = ,
+  #           linetype = "dashed") +
+  geom_vline(xintercept = exp(inla.hpdmarginal(0.90, res$marginals.fixed$x_gin_y)[1]),
+             linetype = "dashed") +
+  geom_vline(xintercept = exp(inla.hpdmarginal(0.90, res$marginals.fixed$x_gin_y)[2]),
+             linetype = "dashed") +
+    geom_vline(xintercept = exp(inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[1])) +
+    geom_vline(xintercept = exp(inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[2])) +
+  theme_bw()
 exp(res$summary.fixed$mean[2])
+
+
+
+library(tibble)
+
+model <- data.frame(exp(res$summary.fixed))
+model <- tibble::rownames_to_column(model, "term")
+model$credible <- ifelse(model$X0.025quant > 1, "credible", "not credible")
+
+names(res$marginals.fixed)[1]
+
+inla.smarginal(paste0("res$marginals.fixed$", names(res$marginals.fixed)[1]))
+names <- names(res$marginals.fixed)
+inla.smarginal(res$marginals.fixed$)
+
+
+for(i in res$marginals.fixed) {
+  print(inla.smarginal(i) %>% # smoothed
+    as.data.frame() %>%
+    mutate(x = exp(x)) %>%
+    ggplot(aes(x = x, y = y)) +
+    geom_line(alpha = 1)) #+
+    #geom_area(color = col[i])
+}
+  
+inla.smarginal(res$marginals.fixed$x_gin_y)
+
+ggplot(data = model, 
+       aes(x = mean, y = term, xmin = X0.025quant, xmax = X0.975quant,
+           color = credible)) +
+  geom_pointrange(position = position_dodge(width = 0.5)) +
+  xlim(c(-10, 150))
+  labs(title = "Model Estimates of Brain and Body Weight on REM Sleep",
+       x = "Coefficient Estimate",
+       y = "Predictor",
+       caption = "Models fit with OLS. Error bars show the 95% confidence interval.") +
+  scale_y_discrete(labels = c("Intercept", "Hours Awake", "Body Weight", "Brain Weight")) +
+  ggpubr::theme_pubclean(flip = TRUE)
+
+  ggplot(data = model, 
+         aes(x = mean, y = term, xmin = X0.025quant, xmax = X0.975quant,
+             color = credible)) +
+    geom_pointrange(position = position_dodge(width = 0.5)) +
+    xlim(c(-10, 150))
+  labs(title = "Model Estimates of Brain and Body Weight on REM Sleep",
+       x = "Coefficient Estimate",
+       y = "Predictor",
+       caption = "Models fit with OLS. Error bars show the 95% confidence interval.") +
+    scale_y_discrete(labels = c("Intercept", "Hours Awake", "Body Weight", "Brain Weight")) +
+    ggpubr::theme_pubclean(flip = TRUE)
+
+
+res$marginals.fixed$x_gin_y %>%
+  as.data.frame() %>%
+  mutate(x = exp(x)) %>%
+  ggplot(aes(x = x, y = y)) %>%
+  ggline(aes(x = as.numeric(x), y = as.numeric(y)))
+# + 
+  geom_hline(yintercept = mean(tri_df_clean$freq), linetype = "dashed") +
+  geom_vline(xintercept = 0, linetype = "dashed")
+#ggtitle("Interaction poverty/nh_white_z")# +
+#geom_ribbon(aes(ymin = -theta, ymax = theta), alpha = 0.5)
+p1 + guides(fill = guide_legend(title = "Standardized Percent in Poverty"))
+
+
 
 #
 plot(res, plot.fixed.effects = FALSE,
@@ -263,18 +373,32 @@ plot(res, plot.fixed.effects = FALSE,
      plot.predictor = FALSE, cex = 1.25)
 
 
-res$marginals.fixed$mu_y %>%
+res1$marginals.fixed$mu_y %>%
   as.data.frame() %>%
   mutate(x = exp(x)) %>%
   ggplot(aes(x = x, y = y)) +
   geom_line()
 
+summary(pop_tox$black)
 
 res$marginals.fixed$x_gin_y %>%
   as.data.frame() %>%
   mutate(x = plogis(x)) %>%
   ggplot(aes(x = x, y = y)) +
   geom_line()
+
+summary(res1)
+
+inla.dmarginal(0, res$marginals.fixed$x_gin_y)
+inla.zmarginal(res$marginals.fixed$x_gin_y)
+summary(res1)
+print(res1$summary.fixed)
+print(round(res$summary.fixed, 3))
+
+inla.dmarginal(0, res$marginals.fixed$x_pop_y)
+
+inla.hpdmarginal(0.99, res$marginals.fixed$x_pov_y)
+
 
 save(res, file = "inla_results.RData")
 
