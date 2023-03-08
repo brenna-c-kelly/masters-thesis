@@ -1,0 +1,122 @@
+---
+title: "manuscript figs"
+author: "Brenna Kelly"
+date: "2023-03-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(sf)
+library(tidyr)
+library(dplyr)
+library(ggpubr)
+library(scales)
+library(ggplot2)
+library(stringr)
+library(viridis)
+library(ggExtra)
+library(tableone)
+library(gridExtra)
+```
+
+# Figure X
+
+```{r}
+tri <- read.csv("../stream-pollution-analysis/data/tri.csv") %>%
+  mutate(water = ifelse(unit_of_measure == "Pounds", water, water/16))
+
+tri_counts <- tri %>% 
+  group_by(trifd, year) %>% 
+  tally() # number of rows (i.e., chemicals) (per year, facility)
+tri_sums <- aggregate(tri$water, by = list(tri$trifd, tri$year), FUN = sum)
+
+tri_amts <- cbind(tri_sums, tri_counts)
+
+tri_amts$x_log <- log(tri_amts$x + 0.00001)
+tri_amts$n_log <- log(tri_amts$n)
+
+tri_amts <- tri_amts %>%
+  filter(!year %in% c(1987:1999)) # only past 20 years
+
+tri_amts <- tri_amts[order(tri_amts$n_log), ] # sort by number, for stacked bar
+
+
+my_breaks <- c(0, 0.006, 0.06, 0.6, 6)
+
+tri_amts$x_scale <- tri_amts$x / 1000000
+
+ggplot(data = tri_amts, mapping = aes(x = year, y = x_scale)) +
+  geom_bar(stat = "identity", aes(fill = n)) +
+  scale_fill_viridis_c(breaks = my_breaks, 
+                       labels = my_breaks[1:5],
+                       trans = scales::pseudo_log_trans(sigma = 0.06), 
+                       option = "C",
+                       name = "Number of \nChemicals") +
+  xlab("Year") +
+  ylab("Pounds of Pollution (M)") +
+  theme(axis.title.x = element_text(colour = "black"),
+        axis.title.y = element_text(colour = "black")) +
+  theme_bw()
+```
+
+# Figure Y
+
+```{r}
+
+```
+
+# Table 1: Descriptives
+
+```{r}
+pop_tox <- read.csv("data/pop_tox_merged.csv")
+pop_tox$geoid <- str_pad(pop_tox$geoid, 5, pad = 0)
+
+
+
+```
+
+# Figure Z: Descriptives
+
+```{r}
+names(pop_tox)
+
+#pop_tox_2020 <- pop_tox %>%
+#  filter(year == 2020)
+
+pop_tox_avg <- pop_tox %>%
+  group_by(geoid) %>%
+  summarise_if(is.numeric, .funs = mean) %>%
+  mutate(rsei_score_bin_txt = ifelse(rsei_score_bin >= 0.5, ">0.5", "<0.5"))
+
+pop_tox_avg$rsei_score_bin_rd <- round(pop_tox_avg$rsei_score_bin, digits = 0)
+#options(scipen = 999)
+vars <- c("total", "white", "black", "aian", "asian", "nhpi", "other", 
+          "tom", "hisp", "pov", "gini", "rsei.score", "rsei.score.cancer",
+          "rsei.score.noncancer")
+tab1 <- CreateTableOne(vars, c("rsei_score_bin_rd"), pop_tox_avg)
+tab1 <- CreateTableOne(vars, c("rsei_score_bin"), pop_tox)
+
+tab1_print <- print(tab1, showAllLevels = TRUE, formatOptions = list(big.mark = ","))
+write.csv(tab1_print, file = "table 1.csv")
+
+```
+
+
+
+
+# Figure A: Map
+
+```{r}
+geometry <- st_read("data/geometry.shp")
+
+dat <- merge(geometry, pop_tox, by = "geoid", all = TRUE)
+```
+
+
+
+

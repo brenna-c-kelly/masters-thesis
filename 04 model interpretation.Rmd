@@ -1,0 +1,190 @@
+---
+title: "model interpretations"
+author: "Brenna Kelly"
+date: "2023-03-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# model results
+
+```{r}
+fixed <- data.frame(res$summary.fixed)
+
+fixed <- tibble::rownames_to_column(fixed, "coef")
+
+fixed_z <- df %>%
+  filter(grepl("z", coef))
+fixed_y <- df %>%
+  filter(grepl("y", coef))
+```
+
+
+# Binomial
+## probability for effects increase 
+
+```{r}
+fx_list = vector("list", length = 11)
+for(i in c(2:11)) {
+  int <- fixed_z[which(fixed_z$coef == "mu_z"), "mean"]
+  fx <- fixed_z[i, "mean"]
+  coef <- fixed_z[i, 1]
+  prop_fx <- exp(int + fx) / (1 + exp(int + fx))
+  ci_025 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] + fixed_z[i, "X0.025quant"]) / 
+    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] + fixed_z[i, "X0.025quant"]))
+  ci_975 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] + fixed_z[i, "X0.975quant"]) /
+    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] + fixed_z[i, "X0.975quant"]))
+  sig <- ifelse((fixed_z[i, "X0.025quant"] > 0 & fixed_z[i, "X0.975quant"] > 0) |
+                  (fixed_z[i, "X0.025quant"] < 0 & fixed_z[i, "X0.975quant"] < 0),
+                "sig",
+                "not sig")
+  dir <- ifelse(sig == "sig" & fixed_z[i, "mean"] > 0, "+", "-")
+  df <- data.frame(coef = coef, 
+                   prob = prop_fx,
+                   ci_025 = ci_025,
+                   ci_975 = ci_975,
+                   sig = sig,
+                   dir = dir)
+  fx_list[[i]] <- df
+}
+fx_list = do.call(rbind, fx_list)
+fx_list
+```
+
+## probability for increase in simple bin interactions
+
+```{r}
+intx_list = vector("list", length = 17)
+for(i in c(12:18)) {
+  int <- fixed_z[which(fixed_z$coef == "mu_z"), "mean"]
+  intx_name_1 <- substr(fixed_z[i, "coef"], 1, 7)
+  intx_name_2 <- substr(fixed_z[i, "coef"], 9, 15)
+  #print(intx_name_2)
+  intx <- fixed_z[i, "mean"]
+  intx_name <- ifelse(intx_name_1 == "x_pov_z", intx_name_2, intx_name_1)
+  fx_1 <- fixed_z[which(fixed_z$coef == intx_name), "mean"]
+  fx_2 <- fixed_z[which(fixed_z$coef == "x_pov_z"), "mean"]
+  
+  prop_fx <- exp(int + intx + fx_1 + fx_2) / (1 + exp(int + intx + fx_1 + fx_2))
+  ci_025 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] +
+                  fixed_z[i, "X0.025quant"] +
+                  fixed_z[which(fixed_z$coef == intx_name), "X0.025quant"] +
+                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.025quant"]) /
+    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] +
+                  fixed_z[i, "X0.025quant"] +
+                  fixed_z[which(fixed_z$coef == intx_name), "X0.025quant"] +
+                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.025quant"]))
+  ci_975 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] +
+                  fixed_z[i, "X0.975quant"] +
+                  fixed_z[which(fixed_z$coef == intx_name), "X0.975quant"] +
+                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.975quant"]) /
+    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] +
+                  fixed_z[i, "X0.975quant"] +
+                  fixed_z[which(fixed_z$coef == intx_name), "X0.975quant"] +
+                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.975quant"]))
+  sig <- ifelse((fixed_z[i, "X0.025quant"] > 0 & fixed_z[i, "X0.975quant"] > 0) |
+                  (fixed_z[i, "X0.025quant"] < 0 & fixed_z[i, "X0.975quant"] < 0),
+                "sig",
+                "not sig")
+  dir <- ifelse(sig == "sig" & fixed_z[i, "mean"] > 0, "+", "-")
+  df <- data.frame(coef = fixed_z[i, "coef"], 
+                   prob = prop_fx,
+                   ci_025 = ci_025,
+                   ci_975 = ci_975,
+                   sig = sig,
+                   dir = dir)
+  intx_list[[i]] <- df
+}
+intx_list = do.call(rbind, intx_list)
+intx_list
+
+```
+
+## combined binomial fixed effects
+
+```{r}
+fixed_bin_list <- rbind(fx_list, intx_list)
+fixed_bin_list
+
+write.csv(fixed_bin_list, "fixed_bin_list.csv")
+```
+
+
+# Gamma
+## probability increase for simple gamma effects
+
+```{r}
+fx_list = vector("list", length = 11)
+for(i in c(2:11)) {
+  int <- fixed_y[which(fixed_y$coef == "mu_y"), "mean"]
+  fx <- fixed_y[i, "mean"]
+  coef <- fixed_y[i, 1]
+  perc_fx <- exp(fx)
+  ci_025 <- exp(fixed_y[i, "X0.025quant"])
+  ci_975 <- exp(fixed_y[i, "X0.975quant"])
+  sig <- ifelse((fixed_y[i, "X0.025quant"] > 0 & fixed_y[i, "X0.975quant"] > 0) |
+                  (fixed_y[i, "X0.025quant"] < 0 & fixed_y[i, "X0.975quant"] < 0),
+                "sig",
+                "not sig")
+  dir <- ifelse(sig == "sig" & fixed_y[i, "mean"] > 0, "+", "-")
+  df <- data.frame(coef = coef, 
+                   percent = perc_fx,
+                   ci_025 = ci_025,
+                   ci_975 = ci_975,
+                   sig = sig,
+                   dir = dir)
+  fx_list[[i]] <- df
+}
+fx_list = do.call(rbind, fx_list)
+fx_list
+
+```
+
+## probability for interactions
+
+```{r}
+intx_list = vector("list", length = 17)
+for(i in c(12:18)) {
+  int <- fixed_y[which(fixed_y$coef == "mu_y"), "mean"]
+  intx_name_1 <- substr(fixed_y[i, "coef"], 1, 7)
+  intx_name_2 <- substr(fixed_y[i, "coef"], 9, 15)
+  #print(intx_name_2)
+  intx <- fixed_y[i, "mean"]
+  intx_name <- ifelse(intx_name_1 == "x_pov_y", intx_name_2, intx_name_1)
+  fx_1 <- fixed_y[which(fixed_y$coef == intx_name), "mean"]
+  fx_2 <- fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"]
+  
+  perc_fx <- exp(fixed_y[i, "mean"])# / + fx_1 + fx_2)# / (1 + exp(int + intx + fx_1 + fx_2))
+  ci_025 <- exp(fixed_y[i, "X0.025quant"])
+  ci_975 <- exp(fixed_y[i, "X0.975quant"])
+  sig <- ifelse((fixed_y[i, "X0.025quant"] > 0 & fixed_y[i, "X0.975quant"] > 0) |
+                  (fixed_y[i, "X0.025quant"] < 0 & fixed_y[i, "X0.975quant"] < 0),
+                "sig",
+                "not sig")
+  dir <- ifelse(sig == "sig" & fixed_y[i, "mean"] > 0, "+", "-")
+  df <- data.frame(coef = fixed_y[i, "coef"], 
+                   percent = perc_fx,
+                   ci_025 = ci_025,
+                   ci_975 = ci_975,
+                   sig = sig,
+                   dir = dir)
+  intx_list[[i]] <- df
+}
+intx_list = do.call(rbind, intx_list)
+intx_list
+names(fx_list)
+```
+
+## combined gamma fixed effects
+
+```{r}
+fixed_gam_list <- rbind(fx_list, intx_list)
+fixed_gam_list
+
+write.csv(fixed_gam_list, "fixed_gam_list.csv")
+```
+

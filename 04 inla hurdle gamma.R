@@ -167,17 +167,18 @@ f_hg <- outcome.matrix ~
   # 10k population
   x_pop_z + x_pop_y +
   # inequality index
-  x_pov_z + x_gin_z + x_pov_y + x_gin_y +
+  #x_pov_z + x_pov_y + 
+  x_gin_z + x_gin_y +
    #+  +
   # race covariates
-  #x_bla_z*x_pov_z + x_bla_y*x_pov_y + x_aia_z*x_pov_z + x_aia_y*x_pov_y +
-  #x_asi_z*x_pov_z + x_asi_y*x_pov_y + x_nhp_z*x_pov_z + x_nhp_y*x_pov_y + 
-  #x_tom_z*x_pov_z + x_tom_y*x_pov_y + x_oth_z*x_pov_z + x_oth_y*x_pov_y + 
-  #x_his_z*x_pov_z  + x_his_y*x_pov_y - 1 +
-  x_bla_z + x_bla_y + x_aia_z + x_aia_y +
-  x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
-  x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
-  x_his_z + x_his_y - 1
+  x_bla_z*x_pov_z + x_bla_y*x_pov_y + x_aia_z*x_pov_z + x_aia_y*x_pov_y +
+  x_asi_z*x_pov_z + x_asi_y*x_pov_y + x_nhp_z*x_pov_z + x_nhp_y*x_pov_y + 
+  x_tom_z*x_pov_z + x_tom_y*x_pov_y + x_oth_z*x_pov_z + x_oth_y*x_pov_y + 
+  x_his_z*x_pov_z  + x_his_y*x_pov_y - 1 #+
+  #x_bla_z + x_bla_y + x_aia_z + x_aia_y +
+  #x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
+  #x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
+  #x_his_z + x_his_y - 1
   #x_bla_z*x_pov_z*x_gin_z + x_bla_y*x_pov_y*x_gin_y + x_aia_z*x_pov_z*x_gin_z + x_aia_y*x_pov_y*x_gin_y +
   #x_asi_z*x_pov_z*x_gin_z + x_asi_y*x_pov_y*x_gin_y + x_nhp_z*x_pov_z*x_gin_z + x_nhp_y*x_pov_y*x_gin_y + 
   #x_tom_z*x_pov_z*x_gin_z + x_tom_y*x_pov_y*x_gin_y + x_oth_z*x_pov_z*x_gin_z + x_oth_y*x_pov_y*x_gin_y + 
@@ -201,13 +202,14 @@ res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
 # all effects -pov    12445770.37, nan produced
 # all fx, pov*his     12196906.61, nan produced
 # all fx, race*pov    11771494.03, nan produced, max correction
-
+# 
+# no intx; race/pov/gin   10229835.82
+# race*pov, gin           10109090.23
+hist(pop_tox$pov)
 #add redlining? epa region? gini index
-
+summary(res_1)
 summary(res)
-summary(res1)
 
-rowid <- which(res1$summary.random$country == "Japan")
 res1$summary.random$country[rowid, ]
 summary(res1)
 summary(res)
@@ -240,9 +242,9 @@ round(res$summary.fixed, 3)
 # 10297035.52 no intx, gini
 
 # plots
-plot(res, plot.fixed.effects = TRUE,
+plot(res, plot.fixed.effects = FALSE,
      plot.random.effects = FALSE,
-     plot.hyperparameters = FALSE,
+     plot.hyperparameters = TRUE,
      plot.predictor = FALSE, cex = 1.25)
 
 
