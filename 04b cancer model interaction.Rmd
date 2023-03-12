@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # model results
 
 ```{r}
-fixed <- data.frame(res$summary.fixed)
+fixed <- data.frame(res_cancer$summary.fixed)
 
 fixed <- tibble::rownames_to_column(fixed, "coef")
 
@@ -54,8 +54,8 @@ for(i in c(2:11)) {
 fx_list = do.call(rbind, fx_list)
 fx_list
 
-data.frame(fixed_z[3, 1], 
-           prob = round(exp(fixed_z[3, 2:8] ) / (1 + exp(fixed_z[3, 2:8])), 3))
+data.frame(fixed_z[, 1], 
+           prob = round(exp(fixed_z[, 2:8] ) / (1 + exp(fixed_z[, 2:8])), 3))
 
 ```
 

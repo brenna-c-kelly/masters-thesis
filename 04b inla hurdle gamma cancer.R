@@ -9,7 +9,9 @@ library(moments)
 library(regclass)
 library(tidyverse)
 
+###   Cancer
 ## data
+
 pop_tox <- read.csv("data/pop_tox_merged.csv")
 
 pop_tox$state.x <- str_pad(pop_tox$state.x, 2, pad = "0")
@@ -45,8 +47,8 @@ plot(m1, cex = 0.4)
 # prep for inla hg
 n = nrow(pop_tox)
 
-z = as.vector(pop_tox$rsei_score_bin == 1)
-y = ifelse(z == 1, pop_tox$rsei.score, NA)
+z = as.vector(pop_tox$rsei_cancer_bin == 1)
+y = ifelse(z == 1, pop_tox$rsei.score.cancer, NA)
 
 #z = as.vector(pop_tox$rsei_cancer_bin == 1)
 #y = ifelse(z == 1, pop_tox$rsei.score.cancer, NA)
@@ -59,29 +61,38 @@ nothing2 <- rep(NA, n)
 zNA = as.vector(c(z, nothing1))
 yNA = as.vector(c(nothing2, y))
 
-outcome.matrix <- matrix(c(zNA, yNA), ncol=2)
+outcome.matrix_cancer <- matrix(c(zNA, yNA), ncol=2)
 
 mu_z <- c(rep(1, n), nothing1) # Binomial 
 mu_y <- c(nothing2, rep(1,  n)) # Gamma 
 
-x_bla <- scale(pop_tox$black, center = TRUE, scale = TRUE)
-x_aia <- scale(pop_tox$aian, center = TRUE, scale = TRUE)
-x_asi <- scale(pop_tox$asian, center = TRUE, scale = TRUE)
-x_nhp <- scale(pop_tox$nhpi, center = TRUE, scale = TRUE)
-x_tom <- scale(pop_tox$tom, center = TRUE, scale = TRUE)
-x_oth <- scale(pop_tox$other, center = TRUE, scale = TRUE)
-x_his <- scale(pop_tox$hisp, center = TRUE, scale = TRUE)
-x_pov <- scale(pop_tox$pov, center = TRUE, scale = TRUE)
-x_pop <- log(pop_tox$population_10k_lc)#scale(pop_tox$population_10k, center = TRUE, scale = TRUE)
-x_gin <- pop_tox$gini#scale(pop_tox$gini, center = TRUE, scale = TRUE)
-x_nw <- log(pop_tox$nonwhite_z)
-hist(pop_tox$hisp)
+x_bla <- pop_tox$black_lc#scale(pop_tox$black, center = TRUE, scale = TRUE)
+x_aia <- pop_tox$aian_lc#scale(pop_tox$aian, center = TRUE, scale = TRUE)
+x_asi <- pop_tox$asian_lc#scale(pop_tox$asian, center = TRUE, scale = TRUE)
+x_nhp <- pop_tox$nhpi_lc#scale(pop_tox$nhpi, center = TRUE, scale = TRUE)
+x_tom <- pop_tox$tom_lc#scale(pop_tox$tom, center = TRUE, scale = TRUE)
+x_oth <- pop_tox$other_lc#scale(pop_tox$other, center = TRUE, scale = TRUE)
+x_his <- pop_tox$hisp_lc#scale(pop_tox$hisp, center = TRUE, scale = TRUE)
+x_pov <- pop_tox$pov_c#scale(pop_tox$pov, center = TRUE, scale = TRUE)
+x_pop <- pop_tox$population_10k_lc#scale(pop_tox$population_10k, center = TRUE, scale = TRUE)
+x_gin <- pop_tox$gini_c#scale(pop_tox$gini, center = TRUE, scale = TRUE)
+x_nw <- pop_tox$nonwhite_lc
+
 #x_epa <- pop_tox$epa_region
 skewness(pop_tox$pov_lc)
 skewness(pop_tox$pov)
-skewness(pop_tox$black_lc)
+skewness(pop_tox$hisp_lc)
+
 skewness(pop_tox$black)
-skewness(pop_tox$population_10k_lc)
+skewness(pop_tox$aian)
+skewness(pop_tox$asian)
+skewness(pop_tox$nhpi)
+skewness(pop_tox$tom)
+skewness(pop_tox$other)
+skewness(pop_tox$hisp)
+
+skewness(pop_tox$population_10k)
+
 ## Create index vectors
 id_space <- pop_tox$idarea
 id_time <- pop_tox$idtime
@@ -140,7 +151,7 @@ x_gin_y <- c(nothing2, x_gin) # Gamma
 #x_epa_y <- c(nothing2, x_epa) # Gamma
 
 # list
-data_hg <- list(outcome.matrix = outcome.matrix, 
+data_hg_cancer <- list(outcome.matrix_cancer = outcome.matrix_cancer, 
                 id_space_z = id_space_z, id_space_y = id_space_y,
                 id_space_z2 = id_space_z2, id_space_y2 = id_space_y2,
                 id_time_z = id_time_z, id_time_y = id_time_y,
@@ -156,10 +167,10 @@ data_hg <- list(outcome.matrix = outcome.matrix,
                 x_pov_z = x_pov_z, x_pov_y = x_pov_y,
                 x_pop_z = x_pop_z, x_pop_y = x_pop_y,
                 x_gin_z = x_gin_z, x_gin_y = x_gin_y)#,
-                #x_epa_z = x_epa_z, x_epa_y = x_epa_y)
+#x_epa_z = x_epa_z, x_epa_y = x_epa_y)
 
 # inla
-f_hg <- outcome.matrix ~ 
+f_hg_cancer <- outcome.matrix_cancer ~ 
   # space and time effects
   f(id_space_z, model = "bym2", graph = g) +
   f(id_space_y, model = "bym2", graph = g) + 
@@ -172,32 +183,33 @@ f_hg <- outcome.matrix ~
   #f(x_epa_z, model = "iid") + f(x_epa_y, model = "iid") +
   # 10k population
   x_pop_z + x_pop_y +
-   #+  +
-  x_gin_z + x_pov_z*x_nw_z + x_gin_y + x_pov_y*x_nw_y - 1# # - 1#+
-   +  - 1
+  #+  +
+  x_gin_z + x_gin_y +
+  #x_gin_z + x_pov_z*x_nw_z + x_gin_y + x_pov_y*x_nw_y - 1# # - 1#+
+  # +  - 1
   # inequality index
-  #x_pov_z + x_pov_y + 
-   #+  +
+  x_pov_z + x_pov_y + 
+  #+  +
   #x_gin_z + x_gin_y +# - 1
   #x_gin_z*x_pov_z + x_gin_y*x_pov_y +
-   #+ 
-   #+  +
-  #x_bla_z*x_pov_z + x_aia_z*x_pov_z + x_asi_z*x_pov_z +
-  #x_nhp_z*x_pov_z + x_tom_z*x_pov_z + x_oth_z*x_pov_z +
-  #x_his_z*x_pov_z +
+  #+ 
+  #+  +
+  x_bla_z*x_pov_z + x_aia_z*x_pov_z + x_asi_z*x_pov_z +
+  x_nhp_z*x_pov_z + x_tom_z*x_pov_z + x_oth_z*x_pov_z +
+  x_his_z*x_pov_z +
   # race covariates
-  #x_bla_y + x_aia_y +
-  #x_asi_y + x_nhp_y + 
-  #x_tom_y + x_oth_y + 
-  #x_his_y - 1 #+
-  #x_bla_z + x_bla_y + x_aia_z + x_aia_y +
-  #x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
-  #x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
-  #x_his_z + x_his_y - 1
-  #x_bla_z*x_pov_z*x_gin_z + x_bla_y*x_pov_y*x_gin_y + x_aia_z*x_pov_z*x_gin_z + x_aia_y*x_pov_y*x_gin_y +
-  #x_asi_z*x_pov_z*x_gin_z + x_asi_y*x_pov_y*x_gin_y + x_nhp_z*x_pov_z*x_gin_z + x_nhp_y*x_pov_y*x_gin_y + 
-  #x_tom_z*x_pov_z*x_gin_z + x_tom_y*x_pov_y*x_gin_y + x_oth_z*x_pov_z*x_gin_z + x_oth_y*x_pov_y*x_gin_y + 
-  #x_his_z*x_pov_z*x_gin_z  + x_his_y*x_pov_y*x_gin_y - 1
+  x_bla_y*x_pov_y + x_aia_y*x_pov_y +
+  x_asi_y*x_pov_y + x_nhp_y*x_pov_y + 
+  x_tom_y*x_pov_y + x_oth_y*x_pov_y + 
+  x_his_y*x_pov_y - 1 #+
+#x_bla_z + x_bla_y + x_aia_z + x_aia_y +
+#x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
+#x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
+#x_his_z + x_his_y - 1
+#x_bla_z*x_pov_z*x_gin_z + x_bla_y*x_pov_y*x_gin_y + x_aia_z*x_pov_z*x_gin_z + x_aia_y*x_pov_y*x_gin_y +
+#x_asi_z*x_pov_z*x_gin_z + x_asi_y*x_pov_y*x_gin_y + x_nhp_z*x_pov_z*x_gin_z + x_nhp_y*x_pov_y*x_gin_y + 
+#x_tom_z*x_pov_z*x_gin_z + x_tom_y*x_pov_y*x_gin_y + x_oth_z*x_pov_z*x_gin_z + x_oth_y*x_pov_y*x_gin_y + 
+#x_his_z*x_pov_z*x_gin_z  + x_his_y*x_pov_y*x_gin_y - 1
 #x_bla_z*x_pov_z + x_bla_y + x_aia_z*x_pov_z + x_aia_y +
 #x_asi_z*x_pov_z + x_asi_y + x_nhp_z*x_pov_z + x_nhp_y + 
 #x_tom_z*x_pov_z + x_tom_y + x_oth_z*x_pov_z + x_oth_y + 
@@ -205,7 +217,7 @@ f_hg <- outcome.matrix ~
 # poverty
 #x_pov_z + x_pov_y
 
-res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
+res_cancer <- inla(f_hg_cancer, family = c("binomial", "gamma"), data = data_hg_cancer,
             control.compute = list(dic = TRUE, waic = TRUE),
             control.inla= list(int.strategy = "eb"),
             #control.family = c("logit", "inverse"),
@@ -223,8 +235,10 @@ res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
 
 #add redlining? epa region? gini index
 #summary(res_1)
-summary(res)
+summary(res_cancer)
 
+#150749.38
+#150820.71
 
 summary(pop_tox$rsei_score_bin)
 # 12504403.65
@@ -328,7 +342,7 @@ test_99 <- test %>%
 ggplot(test_99, aes(x = x, y = y)) +
   geom_line(alpha = 0) +
   geom_area(aes(fill = x), alpha = 0.5)# +
-  geom_line(test_90, mapping = aes(x = x, y = y), alpha = 0) +
+geom_line(test_90, mapping = aes(x = x, y = y), alpha = 0) +
   geom_area(, alpha = 0.5)
 
 inla.smarginal(res$marginals.fixed$x_gin_y) %>% # smoothed
@@ -344,8 +358,8 @@ inla.smarginal(res$marginals.fixed$x_gin_y) %>% # smoothed
              linetype = "dashed") +
   geom_vline(xintercept = exp(inla.hpdmarginal(0.90, res$marginals.fixed$x_gin_y)[2]),
              linetype = "dashed") +
-    geom_vline(xintercept = exp(inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[1])) +
-    geom_vline(xintercept = exp(inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[2])) +
+  geom_vline(xintercept = exp(inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[1])) +
+  geom_vline(xintercept = exp(inla.hpdmarginal(0.99, res$marginals.fixed$x_gin_y)[2])) +
   theme_bw()
 exp(res$summary.fixed$mean[2])
 
@@ -366,13 +380,13 @@ inla.smarginal(res$marginals.fixed$)
 
 for(i in res$marginals.fixed) {
   print(inla.smarginal(i) %>% # smoothed
-    as.data.frame() %>%
-    mutate(x = exp(x)) %>%
-    ggplot(aes(x = x, y = y)) +
-    geom_line(alpha = 1)) #+
-    #geom_area(color = col[i])
+          as.data.frame() %>%
+          mutate(x = exp(x)) %>%
+          ggplot(aes(x = x, y = y)) +
+          geom_line(alpha = 1)) #+
+  #geom_area(color = col[i])
 }
-  
+
 inla.smarginal(res$marginals.fixed$x_gin_y)
 
 ggplot(data = model, 
@@ -380,24 +394,24 @@ ggplot(data = model,
            color = credible)) +
   geom_pointrange(position = position_dodge(width = 0.5)) +
   xlim(c(-10, 150))
-  labs(title = "Model Estimates of Brain and Body Weight on REM Sleep",
-       x = "Coefficient Estimate",
-       y = "Predictor",
-       caption = "Models fit with OLS. Error bars show the 95% confidence interval.") +
+labs(title = "Model Estimates of Brain and Body Weight on REM Sleep",
+     x = "Coefficient Estimate",
+     y = "Predictor",
+     caption = "Models fit with OLS. Error bars show the 95% confidence interval.") +
   scale_y_discrete(labels = c("Intercept", "Hours Awake", "Body Weight", "Brain Weight")) +
   ggpubr::theme_pubclean(flip = TRUE)
 
-  ggplot(data = model, 
-         aes(x = mean, y = term, xmin = X0.025quant, xmax = X0.975quant,
-             color = credible)) +
-    geom_pointrange(position = position_dodge(width = 0.5)) +
-    xlim(c(-10, 150))
-  labs(title = "Model Estimates of Brain and Body Weight on REM Sleep",
-       x = "Coefficient Estimate",
-       y = "Predictor",
-       caption = "Models fit with OLS. Error bars show the 95% confidence interval.") +
-    scale_y_discrete(labels = c("Intercept", "Hours Awake", "Body Weight", "Brain Weight")) +
-    ggpubr::theme_pubclean(flip = TRUE)
+ggplot(data = model, 
+       aes(x = mean, y = term, xmin = X0.025quant, xmax = X0.975quant,
+           color = credible)) +
+  geom_pointrange(position = position_dodge(width = 0.5)) +
+  xlim(c(-10, 150))
+labs(title = "Model Estimates of Brain and Body Weight on REM Sleep",
+     x = "Coefficient Estimate",
+     y = "Predictor",
+     caption = "Models fit with OLS. Error bars show the 95% confidence interval.") +
+  scale_y_discrete(labels = c("Intercept", "Hours Awake", "Body Weight", "Brain Weight")) +
+  ggpubr::theme_pubclean(flip = TRUE)
 
 
 res$marginals.fixed$x_gin_y %>%
@@ -406,7 +420,7 @@ res$marginals.fixed$x_gin_y %>%
   ggplot(aes(x = x, y = y)) %>%
   ggline(aes(x = as.numeric(x), y = as.numeric(y)))
 # + 
-  geom_hline(yintercept = mean(tri_df_clean$freq), linetype = "dashed") +
+geom_hline(yintercept = mean(tri_df_clean$freq), linetype = "dashed") +
   geom_vline(xintercept = 0, linetype = "dashed")
 #ggtitle("Interaction poverty/nh_white_z")# +
 #geom_ribbon(aes(ymin = -theta, ymax = theta), alpha = 0.5)

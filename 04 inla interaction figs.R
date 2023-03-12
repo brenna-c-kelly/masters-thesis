@@ -17,41 +17,45 @@ fixed_y <- df %>%
 coefs <- res$summary.fixed
 
 ## Intercept
-b0 <- coefs[which(rownames(coefs) == "mu_z"), 1]
+b0 <- coefs[which(rownames(coefs) == "mu_y"), 1]
 
 ## violent crime coefficient and prediction values (x-axis)
-b1 <- coefs[which(rownames(coefs) == "x_pov_z"), 1]
-x1 <- seq(-2, 2, length = 100) ## Violent crime
+b1 <- coefs[which(rownames(coefs) == "x_pov_y"), 1]
+x1 <- seq(-3, 3, length = 100) ## Violent crime
 
 ## percent white coefficient and prediction values (colors)
-b2 <- coefs[which(rownames(coefs) == "x_aia_z"), 1]
-x2 <- seq(-2, 2) ## PerWhite
+b2 <- coefs[which(rownames(coefs) == "x_asi_y"), 1]
+x2 <- seq(-3, 3) ## PerWhite
 
 ## interaction coefficient
-b3 <- coefs[which(rownames(coefs) == "x_pov_z:x_aia_z"), 1]
+b3 <- coefs[which(rownames(coefs) == "x_pov_y:x_asi_y"), 1]
 
 ## Prediction grid
-myx <- expand.grid(x_aia_z = x1, x_pov_z = x2)
+myx <- expand.grid(x_asi_y = x1, x_pov_y = x2)
 
 ## Expected log counts for grid
-myx$log_theta <- b0 + b1 * myx$x_pov_z + b2 * myx$x_aia_z +
-  b3 * (myx$x_pov_z * myx$x_aia_z)
+myx$log_theta <- b0 + b1 * myx$x_pov_y + b2 * myx$x_asi_y +
+  b3 * (myx$x_pov_y * myx$x_asi_y)
+
+myx$theta_fix <- exp(myx$log_theta)# / (1 + exp(myx$log_theta))
 
 ## Inverse link transform
 myx$theta <- exp(myx$log_theta)
-
+summary(myx$theta_fix)
 ## Plots - convert perwhite to factors
 #myx$nonwhite_c <- as.factor(myx$nonwhite_c)
-myx$x_pov_z <- as.factor(myx$x_pov_z)
+myx$x_pov_y <- as.factor(myx$x_pov_y)
+
+summary(myx$theta_fix)
 
 ## Plot it
-p1 <- ggline(myx, x = "x_aia_z", y = "theta", 
-             col = "x_pov_z", numeric.x.axis = TRUE, 
+p1 <- ggline(myx, x = "x_asi_y", y = "theta_fix", 
+             col = "x_pov_y", numeric.x.axis = TRUE, 
              size = 1.5, plot_type = 'l',
-             xlab = "AIAN",
-             ylab = "Relative rate", alpha = 0.5) +
-  scale_colour_manual(values = rev(brewer.pal(6, "Spectral"))) +
-  geom_hline(yintercept = mean(pop_tox$rsei.score), linetype = "dashed") +
-  ggtitle("Hispanic/Poverty: All")
+             xlab = "Asian Population (log units)",
+             ylab = "Risk Potential", alpha = 0.5) +
+  scale_colour_manual(values = rev(brewer.pal(8, "RdYlBu"))) +
+  #geom_hline(yintercept = mean(pop_tox$rsei.score), linetype = "dashed") +
+  ggtitle("Race/Poverty: All")
 p1
 
