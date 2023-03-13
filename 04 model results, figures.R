@@ -80,9 +80,20 @@ pop_tox <- pop_tox %>%
   mutate(mean_epa = ifelse(epa_region == "nine", rsei_mean_epa[which(rsei_mean_epa$Group.1 == "nine"), 2], mean_epa)) %>%
   mutate(mean_epa = ifelse(epa_region == "ten", rsei_mean_epa[which(rsei_mean_epa$Group.1 == "ten"), 2], mean_epa)) %>%
   mutate(mean_epa = ifelse(epa_region == "twenty-five", rsei_mean_epa[which(rsei_mean_epa$Group.1 == "twenty-five"), 2], mean_epa))
- 
 
-score_time <- aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$year, pop_tox$epa_region), FUN = mean)
+
+score_time <- aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$year), FUN = sum)
+
+bin_time <- aggregate(pop_tox$rsei_cancer_bin, by = list(pop_tox$year), FUN = mean, na.rm = TRUE)
+bin_time$Group.1 <- as.factor(bin_time$Group.1)
+bin_time$Group.1 <- relevel(bin_time$Group.1, ref = "2015")
+bin_time <- pop_tox %>%
+  filter(rsei_cancer_bin == 1)
+chisq.test(bin_time$rsei.score.cancer, bin_time$year)
+summary(glm(rsei.score.cancer ~ year, data = pop_tox))
+summary(glm(rsei_cancer_bin ~ year, data = pop_tox))
+
+score_time <- aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$epa_region), FUN = mean)
 ggplot(score_time, aes(x = Group.1, y = x, colour = Group.2)) +
   geom_line(cex = 1) +
   ylim(0, 40000) +
@@ -90,12 +101,19 @@ ggplot(score_time, aes(x = Group.1, y = x, colour = Group.2)) +
   scale_colour_viridis_d(option = "plasma")
   
 test <- score_time %>%
-  filter(Group.1 = 2011)
+  filter(Group.1 == 2013)
 
+bin <- pop_tox %>%
+  filter(rsei_cancer_bin == 1)
 
-tm_shape(pop_tox_shp) +
-  tm_polygons(col = "mean_epa", lwd = 0, style = "cont", palette = "viridis") +
-tm_facets(by = "year")
+summary(bin$rsei.score.cancer)
+bin[which(bin$rsei.score.cancer == max(bin$rsei.score.cancer)), ]
+
+bin[which(bin$rsei.score.cancer == min(bin$rsei.score.cancer)), ]
+
+tm_shape(pop_tox_yr$`2011`) +
+  tm_polygons(col = "epa_region", lwd = 0, style = "cont", palette = "plasma") +
+  tm_facets(by = "year")
 
 pop_tox_shp$cancer_log <- log(pop_tox_shp$rsei.score.cancer + 0.01)
 tm_shape(pop_tox_shp) +

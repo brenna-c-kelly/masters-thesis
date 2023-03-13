@@ -13,13 +13,13 @@ knitr::opts_chunk$set(echo = TRUE)
 # model results
 
 ```{r}
-fixed <- data.frame(res_cancer$summary.fixed)
+fixed_cancer <- data.frame(res_cancer$summary.fixed)
 
-fixed <- tibble::rownames_to_column(fixed, "coef")
+fixed_cancer <- tibble::rownames_to_column(fixed_cancer, "coef")
 
-fixed_z <- fixed %>%
+fixed_cancer_z <- fixed_cancer %>%
   filter(grepl("z", coef))
-fixed_y <- fixed %>%
+fixed_cancer_y <- fixed_cancer %>%
   filter(grepl("y", coef))
 ```
 
@@ -28,21 +28,21 @@ fixed_y <- fixed %>%
 ## probability for effects increase 
 
 ```{r}
-fx_list = vector("list", length = 11)
-for(i in c(2:11)) {
-  int <- fixed_z[which(fixed_z$coef == "mu_z"), "mean"]
-  fx <- fixed_z[i, "mean"]
-  coef <- fixed_z[i, 1]
+fx_list = vector("list", length = 10)
+for(i in c(2:10)) {
+  int <- fixed_cancer_z[which(fixed_z$coef == "mu_z"), "mean"]
+  fx <- fixed_cancer_z[i, "mean"]
+  coef <- fixed_cancer_z[i, 1]
   prop_fx <- exp(int + fx) / (1 + exp(int + fx))
-  ci_025 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] + fixed_z[i, "X0.025quant"]) / 
-    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] + fixed_z[i, "X0.025quant"]))
-  ci_975 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] + fixed_z[i, "X0.975quant"]) /
-    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] + fixed_z[i, "X0.975quant"]))
-  sig <- ifelse((fixed_z[i, "X0.025quant"] > 0 & fixed_z[i, "X0.975quant"] > 0) |
-                  (fixed_z[i, "X0.025quant"] < 0 & fixed_z[i, "X0.975quant"] < 0),
+  ci_025 <- exp(fixed_cancer_z[which(fixed_cancer_z$coef == "mu_z"), "X0.025quant"] + fixed_cancer_z[i, "X0.025quant"]) / 
+    (1 + exp(fixed_cancer_z[which(fixed_cancer_z$coef == "mu_z"), "X0.025quant"] + fixed_cancer_z[i, "X0.025quant"]))
+  ci_975 <- exp(fixed_cancer_z[which(fixed_cancer_z$coef == "mu_z"), "X0.975quant"] + fixed_cancer_z[i, "X0.975quant"]) /
+    (1 + exp(fixed_cancer_z[which(fixed_cancer_z$coef == "mu_z"), "X0.975quant"] + fixed_cancer_z[i, "X0.975quant"]))
+  sig <- ifelse((fixed_cancer_z[i, "X0.025quant"] > 0 & fixed_cancer_z[i, "X0.975quant"] > 0) |
+                  (fixed_cancer_z[i, "X0.025quant"] < 0 & fixed_cancer_z[i, "X0.975quant"] < 0),
                 "sig",
                 "not sig")
-  dir <- ifelse(sig == "sig" & fixed_z[i, "mean"] > 0, "+", "-")
+  dir <- ifelse(sig == "sig" & fixed_cancer_z[i, "mean"] > 0, "+", "-")
   df <- data.frame(coef = coef, 
                    prob = prop_fx,
                    ci_025 = ci_025,
@@ -57,45 +57,68 @@ fx_list
 data.frame(fixed_z[, 1], 
            prob = round(exp(fixed_z[, 2:8] ) / (1 + exp(fixed_z[, 2:8])), 3))
 
+fixed_z
+
+# NOT log transformed
+# Gini
+exp(fixed_z[1, 2:8]) / (1 + exp(fixed_z[1, 2:8]))
+exp(fixed_z[3, 2:8] + fixed_z[1, 2:8]) / (1 + exp(fixed_z[3, 2:8] + fixed_z[1, 2:8]))
+exp(fixed_z[3, 2:8]) / (1 + exp(fixed_z[3, 2:8]))
+exp(fixed_z[4, 2:8] + fixed_z[1, 2:8]) / (1 + exp(fixed_z[4, 2:8] + fixed_z[1, 2:8]))
+
+for(i in c(1:10)) {
+  mean <- logit2prob(fixed_cancer_z[i, "mean"])
+  lower <- logit2prob(fixed_cancer_z[i, "X0.025quant"])
+  upper <- logit2prob(fixed_cancer_z[i, "X0.975quant"])
+  df <- data.frame(i = fixed_cancer_z[i, 1],
+                   mean = mean,
+                   lower = lower,
+                   upper = upper)
+  print(df)
+}
+
+fixed_cancer_z[1, "mean"]
+
+
 ```
 
 ## probability for increase in simple bin interactions
 
 ```{r}
 intx_list = vector("list", length = 17)
-for(i in c(12:18)) {
-  int <- fixed_z[which(fixed_z$coef == "mu_z"), "mean"]
-  intx_name_1 <- substr(fixed_z[i, "coef"], 1, 7)
-  intx_name_2 <- substr(fixed_z[i, "coef"], 9, 15)
+for(i in c(11:17)) {
+  int <- fixed_cancer_z[which(fixed_cancer_z$coef == "mu_z"), "mean"]
+  intx_name_1 <- substr(fixed_cancer_z[i, "coef"], 1, 7)
+  intx_name_2 <- substr(fixed_cancer_z[i, "coef"], 9, 15)
   #print(intx_name_2)
-  intx <- fixed_z[i, "mean"]
+  intx <- fixed_cancer_z[i, "mean"]
   intx_name <- ifelse(intx_name_1 == "x_pov_z", intx_name_2, intx_name_1)
-  fx_1 <- fixed_z[which(fixed_z$coef == intx_name), "mean"]
-  fx_2 <- fixed_z[which(fixed_z$coef == "x_pov_z"), "mean"]
+  fx_1 <- fixed_cancer_z[which(fixed_cancer_z$coef == intx_name), "mean"]
+  fx_2 <- fixed_cancer_z[which(fixed_cancer_z$coef == "x_pov_z"), "mean"]
   
   prop_fx <- exp(int + intx + fx_1 + fx_2) / (1 + exp(int + intx + fx_1 + fx_2))
-  ci_025 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] +
-                  fixed_z[i, "X0.025quant"] +
-                  fixed_z[which(fixed_z$coef == intx_name), "X0.025quant"] +
-                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.025quant"]) /
-    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] +
-                  fixed_z[i, "X0.025quant"] +
-                  fixed_z[which(fixed_z$coef == intx_name), "X0.025quant"] +
-                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.025quant"]))
-  ci_975 <- exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] +
-                  fixed_z[i, "X0.975quant"] +
-                  fixed_z[which(fixed_z$coef == intx_name), "X0.975quant"] +
-                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.975quant"]) /
-    (1 + exp(fixed_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] +
-                  fixed_z[i, "X0.975quant"] +
-                  fixed_z[which(fixed_z$coef == intx_name), "X0.975quant"] +
-                  fixed_z[which(fixed_z$coef == "x_pov_z"), "X0.975quant"]))
-  sig <- ifelse((fixed_z[i, "X0.025quant"] > 0 & fixed_z[i, "X0.975quant"] > 0) |
-                  (fixed_z[i, "X0.025quant"] < 0 & fixed_z[i, "X0.975quant"] < 0),
+  ci_025 <- exp(fixed_cancer_z[which(fixed_cancer_z$coef == "mu_z"), "X0.025quant"] +
+                  fixed_cancer_z[i, "X0.025quant"] +
+                  fixed_cancer_z[which(fixed_cancer_z$coef == intx_name), "X0.025quant"] +
+                  fixed_cancer_z[which(fixed_cancer_z$coef == "x_pov_z"), "X0.025quant"]) /
+    (1 + exp(fixed_cancer_z[which(fixed_z$coef == "mu_z"), "X0.025quant"] +
+                  fixed_cancer_z[i, "X0.025quant"] +
+                  fixed_cancer_z[which(fixed_cancer_z$coef == intx_name), "X0.025quant"] +
+                  fixed_cancer_z[which(fixed_cancer_z$coef == "x_pov_z"), "X0.025quant"]))
+  ci_975 <- exp(fixed_cancer_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] +
+                  fixed_cancer_z[i, "X0.975quant"] +
+                  fixed_cancer_z[which(fixed_z$coef == intx_name), "X0.975quant"] +
+                  fixed_cancer_z[which(fixed_z$coef == "x_pov_z"), "X0.975quant"]) /
+    (1 + exp(fixed_cancer_z[which(fixed_z$coef == "mu_z"), "X0.975quant"] +
+                  fixed_cancer_z[i, "X0.975quant"] +
+                  fixed_cancer_z[which(fixed_z$coef == intx_name), "X0.975quant"] +
+                  fixed_cancer_z[which(fixed_z$coef == "x_pov_z"), "X0.975quant"]))
+  sig <- ifelse((fixed_cancer_z[i, "X0.025quant"] > 0 & fixed_cancer_z[i, "X0.975quant"] > 0) |
+                  (fixed_cancer_z[i, "X0.025quant"] < 0 & fixed_cancer_z[i, "X0.975quant"] < 0),
                 "sig",
                 "not sig")
-  dir <- ifelse(sig == "sig" & fixed_z[i, "mean"] > 0, "+", "-")
-  df <- data.frame(coef = fixed_z[i, "coef"], 
+  dir <- ifelse(sig == "sig" & fixed_cancer_z[i, "mean"] > 0, "+", "-")
+  df <- data.frame(coef = fixed_cancer_z[i, "coef"], 
                    prob = prop_fx,
                    ci_025 = ci_025,
                    ci_975 = ci_975,
@@ -105,6 +128,20 @@ for(i in c(12:18)) {
 }
 intx_list = do.call(rbind, intx_list)
 intx_list
+
+
+for(i in c(11:17)) {
+  mean <- logit2prob(fixed_z[i, "mean"])
+  lower <- logit2prob(fixed_z[i, "X0.025quant"])
+  upper <- logit2prob(fixed_z[i, "X0.975quant"])
+  df <- data.frame(i = fixed_z[i, 1],
+                   mean = mean,
+                   lower = lower,
+                   upper = upper)
+  print(df)
+}
+
+
 
 ```
 
@@ -123,19 +160,19 @@ write.csv(fixed_bin_list, "fixed_bin_list.csv")
 
 ```{r}
 fx_list = vector("list", length = 11)
-fixed_y
-for(i in c(2:11)) {
-  int <- fixed_y[which(fixed_y$coef == "mu_y"), "mean"]
-  fx <- fixed_y[i, "mean"]
-  coef <- fixed_y[i, 1]
-  perc_fx <- exp(int + fx)
-  ci_025 <- exp(fixed_y[i, "X0.025quant"] + fixed_y[which(fixed_y$coef == "mu_y"), "X0.025quant"])
-  ci_975 <- exp(fixed_y[i, "X0.975quant"] + fixed_y[which(fixed_y$coef == "mu_y"), "X0.975quant"])
-  sig <- ifelse((fixed_y[i, "X0.025quant"] > 0 & fixed_y[i, "X0.975quant"] > 0) |
-                  (fixed_y[i, "X0.025quant"] < 0 & fixed_y[i, "X0.975quant"] < 0),
+
+for(i in c(2:10)) {
+  int <- fixed_cancer_y[which(fixed_cancer_y$coef == "mu_y"), "mean"]
+  fx <- fixed_cancer_y[i, "mean"]
+  coef <- fixed_cancer_y[i, 1]
+  perc_fx <- log(int + fx)
+  ci_025 <- log(fixed_cancer_y[i, "X0.025quant"] + fixed_cancer_y[which(fixed_cancer_y$coef == "mu_y"), "X0.025quant"])
+  ci_975 <- log(fixed_cancer_y[i, "X0.975quant"] + fixed_cancer_y[which(fixed_cancer_y$coef == "mu_y"), "X0.975quant"])
+  sig <- ifelse((fixed_cancer_y[i, "X0.025quant"] > 0 & fixed_cancer_y[i, "X0.975quant"] > 0) |
+                  (fixed_cancer_y[i, "X0.025quant"] < 0 & fixed_cancer_y[i, "X0.975quant"] < 0),
                 "sig",
                 "not sig")
-  dir <- ifelse(sig == "sig" & fixed_y[i, "mean"] > 0, "+", "-")
+  dir <- ifelse(sig == "sig" & fixed_cancer_y[i, "mean"] > 0, "+", "-")
   df <- data.frame(coef = coef, 
                    percent = perc_fx,
                    ci_025 = ci_025,
@@ -145,13 +182,15 @@ for(i in c(2:11)) {
   fx_list[[i]] <- df
 }
 #fx_list_2 = do.call(rbind, fx_list)
-fx_list_2
+#fx_list_2
 fx_list = do.call(rbind, fx_list)
 fx_list
 
-data.frame(fixed_y[, 1], 
-           round(exp(fixed_y[, 2:8]), 3))
+exp(4.551151518)
 
+data.frame(fixed_cancer_y[, 1], 
+           round(exp(fixed_cancer_y[, 2:8]), 3))
+fixed_cancer_y
 
 ```
 
@@ -159,25 +198,25 @@ data.frame(fixed_y[, 1],
 
 ```{r}
 intx_list = vector("list", length = 17)
-for(i in c(12:18)) {
-  int <- fixed_y[which(fixed_y$coef == "mu_y"), "mean"]
-  intx_name_1 <- substr(fixed_y[i, "coef"], 1, 7)
-  intx_name_2 <- substr(fixed_y[i, "coef"], 9, 15)
+for(i in c(11:17)) {
+  int <- fixed_cancer_y[which(fixed_cancer_y$coef == "mu_y"), "mean"]
+  intx_name_1 <- substr(fixed_cancer_y[i, "coef"], 1, 7)
+  intx_name_2 <- substr(fixed_cancer_y[i, "coef"], 9, 15)
   #print(intx_name_2)
-  intx <- fixed_y[i, "mean"]
+  intx <- fixed_cancer_y[i, "mean"]
   intx_name <- ifelse(intx_name_1 == "x_pov_y", intx_name_2, intx_name_1)
-  fx_1 <- fixed_y[which(fixed_y$coef == intx_name), "mean"]
-  fx_2 <- fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"]
+  fx_1 <- fixed_cancer_y[which(fixed_cancer_y$coef == intx_name), "mean"]
+  fx_2 <- fixed_cancer_y[which(fixed_cancer_y$coef == "x_pov_y"), "mean"]
   
-  perc_fx <- exp(fixed_y[i, "mean"])# / + fx_1 + fx_2)# / (1 + exp(int + intx + fx_1 + fx_2))
-  ci_025 <- exp(fixed_y[i, "X0.025quant"])
-  ci_975 <- exp(fixed_y[i, "X0.975quant"])
-  sig <- ifelse((fixed_y[i, "X0.025quant"] > 0 & fixed_y[i, "X0.975quant"] > 0) |
-                  (fixed_y[i, "X0.025quant"] < 0 & fixed_y[i, "X0.975quant"] < 0),
+  perc_fx <- log(fixed_cancer_y[i, "mean"] + int)# / + fx_1 + fx_2)# / (1 + exp(int + intx + fx_1 + fx_2))
+  ci_025 <- log(fixed_cancer_y[i, "X0.025quant"] + fixed_cancer_y[which(fixed_cancer_y$coef == "mu_y"), "X0.025quant"])
+  ci_975 <- log(fixed_cancer_y[i, "X0.975quant"] + fixed_cancer_y[which(fixed_cancer_y$coef == "mu_y"), "X0.975quant"])
+  sig <- ifelse((fixed_cancer_y[i, "X0.025quant"] > 0 & fixed_cancer_y[i, "X0.975quant"] > 0) |
+                  (fixed_cancer_y[i, "X0.025quant"] < 0 & fixed_cancer_y[i, "X0.975quant"] < 0),
                 "sig",
                 "not sig")
-  dir <- ifelse(sig == "sig" & fixed_y[i, "mean"] > 0, "+", "-")
-  df <- data.frame(coef = fixed_y[i, "coef"], 
+  dir <- ifelse(sig == "sig" & fixed_cancer_y[i, "mean"] > 0, "+", "-")
+  df <- data.frame(coef = fixed_cancer_y[i, "coef"], 
                    percent = perc_fx,
                    ci_025 = ci_025,
                    ci_975 = ci_975,

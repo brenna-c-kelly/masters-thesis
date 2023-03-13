@@ -98,8 +98,15 @@ pop_tox_avg$rsei_score_bin_rd <- round(pop_tox_avg$rsei_score_bin, digits = 0)
 vars <- c("total", "white", "black", "aian", "asian", "nhpi", "other", 
           "tom", "hisp", "pov", "gini", "rsei.score", "rsei.score.cancer",
           "rsei.score.noncancer")
-tab1 <- CreateTableOne(vars, c("rsei_score_bin_rd"), pop_tox_avg)
+tab1 <- CreateTableOne(vars, c("rsei_score_bin"), pop_tox_avg)
 tab1 <- CreateTableOne(vars, c("rsei_score_bin"), pop_tox)
+
+1 - ((nrow(pop_tox_avg) - sum(1869 + 696)) / nrow(pop_tox_avg))
+
+prop.table(table(pop_tox_avg$rsei_score_bin == 1))
+prop.table(table(pop_tox_avg$rsei_score_bin == 0))
+
+prop.table(table(pop_tox_avg$rsei_score_bin != 0, pop_tox_avg$rsei_score_bin != 1))
 
 tab1_print <- print(tab1, showAllLevels = TRUE, formatOptions = list(big.mark = ","))
 write.csv(tab1_print, file = "table 1.csv")

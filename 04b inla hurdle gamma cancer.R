@@ -184,7 +184,7 @@ f_hg_cancer <- outcome.matrix_cancer ~
   # 10k population
   x_pop_z + x_pop_y +
   #+  +
-  x_gin_z + x_gin_y +
+  #x_gin_z + x_gin_y +
   #x_gin_z + x_pov_z*x_nw_z + x_gin_y + x_pov_y*x_nw_y - 1# # - 1#+
   # +  - 1
   # inequality index
@@ -202,20 +202,7 @@ f_hg_cancer <- outcome.matrix_cancer ~
   x_asi_y*x_pov_y + x_nhp_y*x_pov_y + 
   x_tom_y*x_pov_y + x_oth_y*x_pov_y + 
   x_his_y*x_pov_y - 1 #+
-#x_bla_z + x_bla_y + x_aia_z + x_aia_y +
-#x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
-#x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
-#x_his_z + x_his_y - 1
-#x_bla_z*x_pov_z*x_gin_z + x_bla_y*x_pov_y*x_gin_y + x_aia_z*x_pov_z*x_gin_z + x_aia_y*x_pov_y*x_gin_y +
-#x_asi_z*x_pov_z*x_gin_z + x_asi_y*x_pov_y*x_gin_y + x_nhp_z*x_pov_z*x_gin_z + x_nhp_y*x_pov_y*x_gin_y + 
-#x_tom_z*x_pov_z*x_gin_z + x_tom_y*x_pov_y*x_gin_y + x_oth_z*x_pov_z*x_gin_z + x_oth_y*x_pov_y*x_gin_y + 
-#x_his_z*x_pov_z*x_gin_z  + x_his_y*x_pov_y*x_gin_y - 1
-#x_bla_z*x_pov_z + x_bla_y + x_aia_z*x_pov_z + x_aia_y +
-#x_asi_z*x_pov_z + x_asi_y + x_nhp_z*x_pov_z + x_nhp_y + 
-#x_tom_z*x_pov_z + x_tom_y + x_oth_z*x_pov_z + x_oth_y + 
-#x_his_z*x_pov_z + x_his_y + x_pov_y - 1
-# poverty
-#x_pov_z + x_pov_y
+
 
 res_cancer <- inla(f_hg_cancer, family = c("binomial", "gamma"), data = data_hg_cancer,
             control.compute = list(dic = TRUE, waic = TRUE),
@@ -236,67 +223,15 @@ res_cancer <- inla(f_hg_cancer, family = c("binomial", "gamma"), data = data_hg_
 #add redlining? epa region? gini index
 #summary(res_1)
 summary(res_cancer)
+print(round(res_cancer$summary.fixed, 3))
 
 #150749.38
 #150820.71
 
 summary(pop_tox$rsei_score_bin)
-# 12504403.65
-# 8140489.88
-#  151450.21 gini*pov
-#  149066.28 gini + pov + <no race>
-#  148052.84 gini + pov + nonwhite
-# ~148000 gini + pov * nonwhite
-#  151571.71 gin + all races + <no pov>
-#  151450.21 gin*pov + all races
-#  152616.05 gin + pov * all races
-#  149822.98 gin + pov + all races
-#  148110.59 gin + pov + nw
-#  149768.18 gin + pov*nw
-#  149087.67 gin*nv + pov
-#  151085.07 pov*race
-#  152616.05 pov*race + gini
-#  150708.82 z_race*pov + pov + gini + race
-#  150772.50 pop*pov
-#  148608.21 nw*pov
-#  148020.54 pop + nw + pov
-
-#  148213.53 pop + nw + pov + gin
-#  149763.06 pop + nw*pov + gin
-
-# no intx 151188.64
-summary(res1)
-summary(res)
-
-print(round(res$summary.fixed, 3))
-print(res$summary.fixed)
-round(res$summary.fixed, 3)
-
-# st, all fx      12096439.43
-# all fx            141713.54
-# st, no intx     11826028.80
-# pop*pov intx    12247180.65
-# basic, gini      8923387.01
-# intx, gini       9141729.74
-# y intx, gini     8863133.09
-# z intx, gini     9048832.47
-# zintx, gini*pop  8783139.27
-# yintx, gini      8894685.23
-# no gini intx     8794990.91
-
-# 10146104.81
-# 10492125.86
-# 10318401.91
-#  9874002.64
-# 10234039.15
-# 10014701.88 pov*gini + race
-# 10164861.91 no interactions < use
-#  9382592.97 no interactions, epa <- use
-#   125285.42 no interactions, epa (cleaned)
-# 10297035.52 no intx, gini
 
 # plots
-plot(res, plot.fixed.effects = FALSE,
+plot(res_cancer, plot.fixed.effects = FALSE,
      plot.random.effects = FALSE,
      plot.hyperparameters = TRUE,
      plot.predictor = FALSE, cex = 1.25)

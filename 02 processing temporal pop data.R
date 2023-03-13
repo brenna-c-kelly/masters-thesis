@@ -50,9 +50,9 @@ ginilist = do.call(rbind, ginilist)
 ginilist$gini <- ginilist$b19083_001
 
 geoids <- data.frame(table(ginilist$geoid))
-subset(!pop_tox$geoid %in% geoids$Var1)
-subset(pop_tox, !(geoid %in% geoids$Var1))
-subset(geoids, !(Var1 %in% pop_tox$geoid))
+#subset(!pop_tox$geoid %in% geoids$Var1)
+#subset(pop_tox, !(geoid %in% geoids$Var1))
+#subset(geoids, !(Var1 %in% pop_tox$geoid))
 
 head(ginilist)
 
@@ -249,6 +249,7 @@ pop_temp$hisp_lc <- log(pop_temp$hisp_z) -
   log(mean(pop_temp$hisp_z))
 pop_temp$pov_lc <- log(pop_temp$pov_z) - 
   log(mean(pop_temp$pov_z))
+
 
 
 

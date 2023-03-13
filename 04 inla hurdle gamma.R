@@ -64,24 +64,33 @@ outcome.matrix <- matrix(c(zNA, yNA), ncol=2)
 mu_z <- c(rep(1, n), nothing1) # Binomial 
 mu_y <- c(nothing2, rep(1,  n)) # Gamma 
 
-x_bla <- scale(pop_tox$black, center = TRUE, scale = TRUE)
-x_aia <- scale(pop_tox$aian, center = TRUE, scale = TRUE)
-x_asi <- scale(pop_tox$asian, center = TRUE, scale = TRUE)
-x_nhp <- scale(pop_tox$nhpi, center = TRUE, scale = TRUE)
-x_tom <- scale(pop_tox$tom, center = TRUE, scale = TRUE)
-x_oth <- scale(pop_tox$other, center = TRUE, scale = TRUE)
-x_his <- scale(pop_tox$hisp, center = TRUE, scale = TRUE)
-x_pov <- scale(pop_tox$pov, center = TRUE, scale = TRUE)
-x_pop <- log(pop_tox$population_10k_lc)#scale(pop_tox$population_10k, center = TRUE, scale = TRUE)
-x_gin <- pop_tox$gini#scale(pop_tox$gini, center = TRUE, scale = TRUE)
-x_nw <- log(pop_tox$nonwhite_z)
-hist(pop_tox$hisp)
+x_bla <- pop_tox$black_lc#scale(pop_tox$black, center = TRUE, scale = TRUE)
+x_aia <- pop_tox$aian_lc#scale(pop_tox$aian, center = TRUE, scale = TRUE)
+x_asi <- pop_tox$asian_lc#scale(pop_tox$asian, center = TRUE, scale = TRUE)
+x_nhp <- pop_tox$nhpi_lc#scale(pop_tox$nhpi, center = TRUE, scale = TRUE)
+x_tom <- pop_tox$tom_lc#scale(pop_tox$tom, center = TRUE, scale = TRUE)
+x_oth <- pop_tox$other_lc#scale(pop_tox$other, center = TRUE, scale = TRUE)
+x_his <- pop_tox$hisp_lc#scale(pop_tox$hisp, center = TRUE, scale = TRUE)
+x_pov <- (pop_tox$pov_c)#scale(pop_tox$pov, center = TRUE, scale = TRUE)
+x_pop <- pop_tox$population_10k_lc#scale(pop_tox$population_10k, center = TRUE, scale = TRUE)
+x_gin <- (pop_tox$gini_c)#scale(pop_tox$gini, center = TRUE, scale = TRUE)
+x_nw <- pop_tox$nonwhite_lc
+
 #x_epa <- pop_tox$epa_region
 skewness(pop_tox$pov_lc)
 skewness(pop_tox$pov)
-skewness(pop_tox$black_lc)
+skewness(pop_tox$gini)
+
 skewness(pop_tox$black)
-skewness(pop_tox$population_10k_lc)
+skewness(pop_tox$aian)
+skewness(pop_tox$asian)
+skewness(pop_tox$nhpi)
+skewness(pop_tox$tom)
+skewness(pop_tox$other)
+skewness(pop_tox$hisp)
+
+skewness(pop_tox$population_10k)
+
 ## Create index vectors
 id_space <- pop_tox$idarea
 id_time <- pop_tox$idtime
@@ -173,23 +182,24 @@ f_hg <- outcome.matrix ~
   # 10k population
   x_pop_z + x_pop_y +
    #+  +
-  x_gin_z + x_pov_z*x_nw_z + x_gin_y + x_pov_y*x_nw_y - 1# # - 1#+
-   +  - 1
+  #x_gin_z + x_gin_y +
+  #x_gin_z + x_pov_z*x_nw_z + x_gin_y + x_pov_y*x_nw_y - 1# # - 1#+
+  # +  - 1
   # inequality index
-  #x_pov_z + x_pov_y + 
+  x_pov_z + x_pov_y + 
    #+  +
   #x_gin_z + x_gin_y +# - 1
   #x_gin_z*x_pov_z + x_gin_y*x_pov_y +
    #+ 
    #+  +
-  #x_bla_z*x_pov_z + x_aia_z*x_pov_z + x_asi_z*x_pov_z +
-  #x_nhp_z*x_pov_z + x_tom_z*x_pov_z + x_oth_z*x_pov_z +
-  #x_his_z*x_pov_z +
+  x_bla_z*x_pov_z + x_aia_z*x_pov_z + x_asi_z*x_pov_z +
+  x_nhp_z*x_pov_z + x_tom_z*x_pov_z + x_oth_z*x_pov_z +
+  x_his_z*x_pov_z +
   # race covariates
-  #x_bla_y + x_aia_y +
-  #x_asi_y + x_nhp_y + 
-  #x_tom_y + x_oth_y + 
-  #x_his_y - 1 #+
+  x_bla_y*x_pov_y + x_aia_y*x_pov_y +
+  x_asi_y*x_pov_y + x_nhp_y*x_pov_y + 
+  x_tom_y*x_pov_y + x_oth_y*x_pov_y + 
+  x_his_y*x_pov_y - 1 #+
   #x_bla_z + x_bla_y + x_aia_z + x_aia_y +
   #x_asi_z + x_asi_y + x_nhp_z + x_nhp_y + 
   #x_tom_z + x_tom_y + x_oth_z + x_oth_y + 
@@ -224,7 +234,10 @@ res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
 #add redlining? epa region? gini index
 #summary(res_1)
 summary(res)
+150759.09
 
+#150749.38
+#150820.71
 
 summary(pop_tox$rsei_score_bin)
 # 12504403.65
