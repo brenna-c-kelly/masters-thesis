@@ -180,7 +180,7 @@ f_hg <- outcome.matrix ~
   mu_z + mu_y + 
   #f(x_epa_z, model = "iid") + f(x_epa_y, model = "iid") +
   # 10k population
-  x_pop_z + x_pop_y +
+  #x_pop_z + x_pop_y +
    #+  +
   #x_gin_z + x_gin_y +
   #x_gin_z + x_pov_z*x_nw_z + x_gin_y + x_pov_y*x_nw_y - 1# # - 1#+
@@ -232,8 +232,10 @@ res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
 # race*pov, gin           10109090.23
 
 #add redlining? epa region? gini index
-#summary(res_1)
 summary(res)
+#151205.86
+#151172.93  w pop
+# 145120.19 wo pop
 150759.09
 
 #150749.38
@@ -293,6 +295,14 @@ round(res$summary.fixed, 3)
 #  9382592.97 no interactions, epa <- use
 #   125285.42 no interactions, epa (cleaned)
 # 10297035.52 no intx, gini
+
+cuya <- pop_tox %>%
+  filter(geoid == "39035")
+
+rsei_11 <- pop_tox %>%
+  filter(year == 2011)
+rsei_20 <- pop_tox %>%
+  filter(year == 2020)
 
 # plots
 plot(res, plot.fixed.effects = FALSE,
