@@ -96,7 +96,7 @@ pop_tox_avg <- pop_tox %>%
 pop_tox_avg$rsei_score_bin_rd <- round(pop_tox_avg$rsei_score_bin, digits = 0)
 #options(scipen = 999)
 vars <- c("total", "white", "black", "aian", "asian", "nhpi", "other", 
-          "tom", "hisp", "pov", "gini", "rsei.score", "rsei.score.cancer",
+          "tom", "hisp", "pov", "rsei.score", "rsei.score.cancer",
           "rsei.score.noncancer")
 tab1 <- CreateTableOne(vars, c("rsei_score_bin"), pop_tox_avg)
 tab1 <- CreateTableOne(vars, c("rsei_score_bin"), pop_tox)
@@ -122,6 +122,8 @@ write.csv(tab1_print, file = "table 1.csv")
 geometry <- st_read("data/geometry.shp")
 
 dat <- merge(geometry, pop_tox, by = "geoid", all = TRUE)
+
+
 ```
 
 
