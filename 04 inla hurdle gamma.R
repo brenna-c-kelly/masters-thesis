@@ -50,8 +50,8 @@ y = ifelse(z == 1, pop_tox$rsei.score, NA)
 
 #z = as.vector(pop_tox$rsei_cancer_bin == 1)
 #y = ifelse(z == 1, pop_tox$rsei.score.cancer, NA)
-mean(y, na.rm = TRUE)
-summary(pop_tox$rsei.score)
+#mean(y, na.rm = TRUE)
+#summary(pop_tox$rsei.score)
 
 nothing1 <- rep(NA, n)
 nothing2 <- rep(NA, n)
@@ -241,6 +241,26 @@ summary(res)
 #150749.38
 #150820.71
 
+pop_tox_20 <- pop_tox %>%
+  filter(year == 2020)
+
+pop_tox_20.nb <- poly2nb(dat, queen = TRUE)
+nb = nb2listw(pop_tox_20.nb, zero.policy = TRUE)
+moran.test(pop_tox_20$rsei.score,
+           listw = nb2listw(pop_tox_20.nb, style = "B", zero.policy = TRUE),
+           alternative = "two.sided",
+           randomisation = TRUE,
+           na.action = na.exclude)
+
+
+moran.mc(pop_tox_20$rsei.score, 
+         listw = nb2listw(pop_tox_20.nb, style = "B", zero.policy = TRUE), 
+         nsim = 999, 
+         alternative = 'greater')
+
+plot(st_geometry(boston), reset = FALSE)
+plot(boston.nb, coords, add = TRUE, col = "gray")
+
 summary(pop_tox$rsei_score_bin)
 # 12504403.65
 # 8140489.88
@@ -311,7 +331,7 @@ plot(res, plot.fixed.effects = FALSE,
      plot.predictor = FALSE, cex = 1.25)
 
 
-sapply(pop_tox, function(x) sum(is.na(x)))
+#sapply(pop_tox, function(x) sum(is.na(x)))
 
 table(pop_tox$rsei.media == "")
 

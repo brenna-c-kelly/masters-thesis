@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(sf)
+library(tmap)
+library(plyr)
 library(tidyr)
 library(dplyr)
 library(ggpubr)
@@ -22,6 +24,7 @@ library(viridis)
 library(ggExtra)
 library(tableone)
 library(gridExtra)
+library(HatchedPolygons)
 ```
 
 # Figure X
@@ -119,13 +122,238 @@ write.csv(tab1_print, file = "table 1.csv")
 # Figure A: Map
 
 ```{r}
+
 geometry <- st_read("data/geometry.shp")
+st <- st_read("/Users/brenna/Documents/School/GEOG 6960/Cont States/cont_states.shp")
 
-dat <- merge(geometry, pop_tox, by = "geoid", all = TRUE)
+pop_tox_20 <- pop_tox %>%
+  filter(year == 2020)
 
+dat <- merge(geometry, pop_tox_20, by = "geoid", all = TRUE)
+
+dat$rsei.score_log <- log(dat$rsei.score + 0.9)
+
+bbox_new <- st_bbox(geometry)
+
+dat_bin <- dat %>%
+  filter(rsei_score_bin == 0)
+
+dat_bin_fill <- dat %>%
+  filter(rsei_score_bin == 1)
+
+
+#png(file = "../Manuscript/figs/2020 RSEI Map.png",
+#    width = 1500, height = 900)
+amt_geog$rsei.score_log <- log(amt_geog$avg_amount + 1)
+tm_shape(amt_geog, bbox = bbox_new) +
+  tm_polygons(col = "rsei.score_log", palette = "-plasma", 
+              lwd = 0, style = "cont") +
+  tm_layout(legend.width = 20,
+            legend.stack = "horizontal") +
+  tm_shape(dat_bin) +
+  tm_polygons(col = "gray99", lwd = 0) +
+  tm_shape(st) +
+  tm_borders(col = "gray20", lwd = 0.5) 
+#dev.off()
+
+
+#
+```
+# Figure B: Time
+
+```{r}
+
+plot(aggregate(pop_tox$rsei_score_bin, by = list(pop_tox$year), FUN = mean))
+plot(aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = mean))
+
+plot(aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = max))
+
+test <- pop_tox %>%
+  group_by(year) %>%
+  slice(which.max(rsei.score))
+  #summarise(max = max(rsei.score, na.rm = TRUE))
+
+test <- pop_tox
+test$total_greater <- ifelse(test$rsei.score.cancer < test$rsei.score.noncancer,
+                             "noncancer", "cancer")
+test <- test %>%
+  filter(!duplicated(geoid))
+
+98495 + 1133646 + 207291 + 155461 + 4101752
+table(test$total_greater)
+
+x <- aggregate(pop_tox$total, by = list(pop_tox$year, pop_tox$rsei_score_bin), FUN = sum) %>%
+  spread(Group.2, x)
+x$ratio_exposed <- x$`1` / (x$`0` + x$`1`)
 
 ```
 
+# summary by EPA region
+
+```{r}
+
+epa_sum <- aggregate(pop_tox$rsei.score, by = list(pop_tox$epa_region, pop_tox$year), FUN = mean)
+names(epa_sum) <- c("epa_region", "year", "rsei.score")
+
+ggplot(epa_sum, aes(x = year, y = rsei.score, colour = epa_region)) +
+  geom_line()
+
+```
+
+##number of times polluted in study period
+
+```{r}
+yrs <- aggregate(pop_tox$rsei_score_bin, by = list(pop_tox$geoid), FUN = sum)
+names(yrs) <- c("geoid", "count")
+yrs_geog <- merge(geometry, yrs, by = "geoid", all = TRUE)
+
+table(yrs_geog$count)
+round(prop.table(table(yrs_geog$count)), 2)
+
+# BIN number of rsei_bin by county
+tm_shape(yrs_geog) +
+  tm_polygons(col = "count", lwd = 0, style = "cont", palette = "-inferno",
+              title = "Number of \nYears Polluted") +
+  tm_shape(st) +
+  tm_borders(col = "gray20", lwd = 0.5)
+
+
+# GAM amount of rsei by county
+amt_geog <- aggregate(pop_tox$rsei.score, by = list(pop_tox$geoid), FUN = mean, na.rm = TRUE)
+names(amt_geog) <- c("geoid", "avg_amount")
+amt_geog <- merge(geometry, amt_geog, by = "geoid", all = TRUE)
+
+tm_shape(amt_geog) +
+  tm_polygons(col = "avg_amount", lwd = 0, style = "cont", palette = "-inferno",
+              title = "Average \nRSEI Score") +
+  tm_shape(st) +
+  tm_borders(col = "gray20", lwd = 0.5)
+
+
+# epa table
+epa_count <- data.frame(aggregate(pop_tox$rsei_score_bin, 
+                                  by = list(pop_tox$epa_region), FUN = mean), 
+                       aggregate(pop_tox$rsei.score, by = list(pop_tox$epa_region),
+                                 FUN = mean)) %>%
+  select(-Group.1.1)
+names(epa_count) <- c("epa region", "%", "mean")
+epa_count$mean <- round(epa_count$mean, 2)
+epa_count$`%` <- round(epa_count$`%`, 3)
+
+epa_count
+
+```
+
+## Average over time
+
+```{r}
+yrs <- data.frame(aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = mean),
+                  aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = sd)) %>%
+  select(-Group.1.1)
+names(yrs) <- c("year", "avg_rsei", "sd_rsei")
+
+ci_95 <- data.frame(ddply(pop_tox, "year", summarise, WQ95 = quantile(rsei.score, .95)),
+                    ddply(pop_tox, "year", summarise, WQ95 = quantile(rsei.score, .05))) %>%
+  select(-year.1)
+names(ci_95) <- c("year", "ci_95", "ci_05")
+
+yrs <- cbind(yrs, ci_95)
+yrs <- yrs[, c(1:3, 5:6)]
+
+
+ggplot(yrs, aes(x = year, y = avg_rsei, ymin = ci_05, ymax = ci_95)) +
+  geom_line(lwd = 1) +
+  geom_ribbon(alpha = 0.5) +
+  theme_bw()
+
+t.test(pop_tox$rsei.score, pop_tox$year)
+
+
+aggregate(pop_tox$total, by = list(pop_tox$rsei_score_bin), FUN = sum)
+2039297388 / 10
+
+```
+#scale_y_continuous(breaks=1:12, labels=month.abb[1:12])+
+  xlab("") + 
+  ylab("") +
+  ggtitle("Total Australian Schizophrenics Born By Month and Year") +
+  theme(
+    plot.title = element_text(color="white",hjust=0,vjust=1, size=rel(2)),
+    plot.background = element_rect(fill="gray20"),
+    panel.background = element_rect(fill="gray20"),
+    panel.border = element_rect(fill=NA,color="gray20", size=0.5, linetype="solid"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(), 
+    axis.text = element_text(color="black", size=rel(1.5)),
+    axis.text.y  = element_text(hjust=1),
+    legend.text = element_text(color="black", size=rel(1.3)),
+    legend.background = element_rect(fill="gray20"),
+    legend.position = "bottom",
+    legend.title=element_blank()
+  )
+
+
+## heat map of time table
+```{r}
+library(data.table)
+
+pop_sc <- pop_tox[, c(3, 42)] %>%
+  mutate(rsei_range = case_when(rsei.score == 0 ~ "0",
+                                rsei.score > 0 & rsei.score <= 1 ~ "<1",
+                                rsei.score > 1 & rsei.score <= 10 ~ "<10",
+                                rsei.score > 10 & rsei.score <= 100 ~ "<100",
+                                rsei.score > 100 & rsei.score <= 1000 ~ "<1000",
+                                rsei.score > 1000 & rsei.score <= 10000 ~ "<10000",
+                                rsei.score > 10000 & rsei.score <= 100000 ~ "<100000",
+                                rsei.score > 100000 ~ ">100000"))
+
+
+#pop_sc$rsei.score <- log(pop_sc$rsei.score + 0.1)
+#setDT(pop_sc)
+
+#pop_sc[, as.list(summary(rsei.score)), by = year]
+
+table(pop_tox$rsei.score <= 1 & pop_tox$rsei.score > 0)
+
+tab <- data.frame(table(pop_sc$year, pop_sc$rsei_range))
+names(tab) <- c("year", "rsei_range", "count")
+
+#tab$year <- factor(tab$year, levels = c(2011, 2012, 2013, 2014, 2015
+#                                        2016, 2017, 2018, 2019, 2020))
+tab$rsei_range <- factor(tab$rsei_range, levels = c("0", "<1", "<10", "<100",
+                                                    "<1000", "<10000", "<100000",
+                                                    ">100000"))
+
+tab$count[tab$rsei_range == "0"] <- NA
+
+tab_0 <- tab %>%
+  filter(count < 2000)
+tab_not0 <- tab %>%
+  filter(count >= 2000)
+
+ggplot(tab, aes(year, rsei_range, fill = count)) + 
+  #geom_tile(size=0, stat="identity") + 
+  #geom_tile(data = tab_not0, fill = "#14005e") +
+  #geom_text(data = tab_not0, aes(label = count), colour = "white") +
+  geom_tile(size = 0, stat="identity", aes(fill = count)) +
+  geom_text(aes(label = count)) +
+  scale_fill_gradientn(colors = viridis_pal(direction = -1, 
+                                            option = "C")(50), 
+                       na.value = "#0a125a", limits = c(0, 277)) +
+  geom_tile(data = tab_not0, fill = "#0a125a") +
+  geom_text(data = tab_not0, aes(label = count), colour = "white") +
+  ggtitle("RSEI Scores 2011-2020") +
+  xlab("Year") + 
+  ylab("RSEI Score Range") +
+  theme(legend.text = element_text(color="black", size=rel(1.3)),
+        axis.text = element_text(color="black", size=rel(1.5))) +
+  labs(fill = "Number of Counties \nin RSEI Range") +
+  theme_minimal()
+  
+
+```
 
 
 
