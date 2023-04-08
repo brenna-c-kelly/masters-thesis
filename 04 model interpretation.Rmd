@@ -7,8 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
 ```
-
 
 # model results
 
@@ -145,6 +145,75 @@ for(i in c(11:17)) {
 
 ```
 
+## binomial odds (not prob)
+```{r}
+fixed_z
+
+logit2odds <- function(logit){
+  odds <- exp(logit)
+  #prob <- odds / (1 + odds)
+  return(odds)
+}
+
+bin_list = vector("list", length = 17)
+
+for(i in c(1:17)) {
+  mean <- logit2odds(fixed_z[i, "mean"])
+  lower <- logit2odds(fixed_z[i, "X0.025quant"])
+  upper <- logit2odds(fixed_z[i, "X0.975quant"])
+  df <- data.frame(i = fixed_z[i, 1],
+                   mean = mean,
+                   lower = lower,
+                   upper = upper)
+  bin_list[[i]] <- df
+}
+
+bin_list = do.call(rbind, bin_list)
+bin_list
+
+```
+
+### broader credible intervals
+
+```{r}
+
+exp(-0.041353502 + 0.038138741 + 0.077950874) # mean oth*pov
+exp(-0.311989882 + -0.003340407 + 0.001418131) # 0.025 oth*pov
+exp(0.22928288 + 0.07961789 + 0.15448362) # 0.975 oth*pov
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_oth_z`)
+
+exp(-0.041353502 + 0.108901134 + 0.105493158) # mean tom*pov
+exp(-0.311989882 + -0.054563600 + -0.037914950) # 0.025 tom*pov
+exp(0.22928288 + 0.27236587 + 0.24890127) # 0.975 tom*pov
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_tom_z`)
+
+exp(-0.041353502 + 0.041127873 + 0.010139907) # mean nhpi*pov
+exp(-0.311989882 + 0.011073147 + -0.046888690) # 0.025 nhpi*pov
+exp(0.22928288 + 0.07118260 + 0.06716851) # 0.975 nhpi*pov
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_nhp_z`)
+
+exp(-0.041353502 + 0.518413456 + -0.113499377) # mean black*pov
+exp(-0.311989882 + 0.401716520 + -0.243593384) # 0.025 black*pov
+exp(0.22928288 + 0.63511039 + 0.01659463) # 0.975 black*pov
+inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_bla_z`) # (95% CI [0.86, 2.41])
+
+exp(-0.041353502 + 0.210238161 + -0.044008002) # mean asian*pov
+exp(-0.311989882 + 0.122456617 + -0.151234734) # 0.025 asian*pov
+exp(0.22928288 + 0.29801970 + 0.06321873) # 0.975 asian*pov
+inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_asi_z`)
+
+1 - inla.pmarginal(0, res$marginals.fixed$x_tom_z)
+1 - inla.pmarginal(0, res$marginals.fixed$x_oth_z)
+inla.pmarginal(0, res$marginals.fixed$x_his_z)
+inla.pmarginal(0, res$marginals.fixed$x_aia_z)
+inla.pmarginal(0, res$marginals.fixed$x_pov_z)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_aia_z`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_nhp_z`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_tom_z`)
+
+```
+
+
 ## combined binomial fixed effects
 
 ```{r}
@@ -193,6 +262,8 @@ data.frame(fixed_y[, 1],
 
 ```
 
+
+
 ## probability for interactions
 
 ```{r}
@@ -229,6 +300,147 @@ intx_list
 round(res$summary.fixed, 3)
 
 ```
+
+## gamma odds (not prob)
+```{r}
+fixed_y
+
+gam_list = vector("list", length = 17)
+
+for(i in c(1:17)) {
+  mean <- exp(fixed_y[i, "mean"])
+  lower <- exp(fixed_y[i, "X0.025quant"])
+  upper <- exp(fixed_y[i, "X0.975quant"])
+  df <- data.frame(i = fixed_y[i, 1],
+                   mean = round(mean, 2),
+                   lower = round(lower, 2),
+                   upper = round(upper, 2))
+  gam_list[[i]] <- df
+}
+gam_list = do.call(rbind, gam_list)
+
+gam_list
+
+```
+
+### broader credible intervals
+
+```{r}
+
+#bla
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_bla_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_bla_y"), "mean"]) # mean bla*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_bla_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_bla_y"), "X0.025quant"]) # 0.025 bla*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_bla_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_bla_y"), "X0.975quant"]) # 0.975 bla*pov
+inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_bla_y`)
+
+#x_aia_y
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_aia_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_aia_y"), "mean"]) # mean x_aia_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_aia_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_aia_y"), "X0.025quant"]) # 0.025 x_aia_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_aia_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_aia_y"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_aia_y`)
+
+#x_asi_y
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_asi_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_asi_y"), "mean"]) # mean x_asi_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_asi_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_asi_y"), "X0.025quant"]) # 0.025 x_asi_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_asi_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_asi_y"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_asi_y`)
+
+#x_nhp_y
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_nhp_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_nhp_y"), "mean"]) # mean x_nhp_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_nhp_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_nhp_y"), "X0.025quant"]) # 0.025 x_nhp_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_nhp_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_nhp_y"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_nhp_y`)
+
+#x_tom_y
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_tom_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_tom_y"), "mean"]) # mean x_tom_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_tom_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_tom_y"), "X0.025quant"]) # 0.025 x_tom_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_tom_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_tom_y"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_tom_y`)
+
+#x_oth_y
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_oth_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_oth_y"), "mean"]) # mean x_oth_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_oth_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_oth_y"), "X0.025quant"]) # 0.025 x_oth_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_oth_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_oth_y"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_oth_y`)
+
+# x_his_y
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_his_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_his_y"), "mean"]) # mean x_his_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_his_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_his_y"), "X0.025quant"]) # 0.025 x_his_y*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_his_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_his_y"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_his_y`)
+
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_bla_y"), "mean"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_bla_y"), "mean"]) # mean bla*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
+      fixed_y[which(fixed_y$coef == "x_bla_y"), "X0.025quant"] + 
+      fixed_y[which(fixed_y$coef == "x_pov_y:x_bla_y"), "X0.025quant"]) # 0.025 bla*pov
+exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
+      fixed_y[which(fixed_y$coef == "x_bla_y"), "X0.975quant"] +
+    fixed_y[which(fixed_y$coef == "x_pov_y:x_bla_y"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_oth_z`)
+
+1 - inla.pmarginal(0, res$marginals.fixed$x_pov_y)
+1 - inla.pmarginal(0, res$marginals.fixed$x_bla_y)
+1 - inla.pmarginal(0, res$marginals.fixed$x_asi_y)
+inla.pmarginal(0, res$marginals.fixed$x_nhp_y)
+inla.pmarginal(0, res$marginals.fixed$x_aia_y)
+inla.pmarginal(0, res$marginals.fixed$x_tom_y)
+1 - inla.pmarginal(0, res$marginals.fixed$x_oth_y)
+1 - inla.pmarginal(0, res$marginals.fixed$x_his_y)
+inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_bla_y`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_aia_y`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_asi_y`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_nhp_y`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_tom_y`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_oth_y`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_his_y)
+
+```
+
+
 
 ## combined gamma fixed effects
 

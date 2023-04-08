@@ -222,10 +222,14 @@ tm_shape(yrs_geog) +
 amt_geog <- aggregate(pop_tox$rsei.score, by = list(pop_tox$geoid), FUN = mean, na.rm = TRUE)
 names(amt_geog) <- c("geoid", "avg_amount")
 amt_geog <- merge(geometry, amt_geog, by = "geoid", all = TRUE)
-
+amt_geog$avg_amount_log <- log(amt_geog$avg_amount + 1)
 tm_shape(amt_geog) +
-  tm_polygons(col = "avg_amount", lwd = 0, style = "cont", palette = "-inferno",
+  tm_polygons(col = "avg_amount_log", lwd = 0, style = "cont", palette = "Reds", #-plasma
               title = "Average \nRSEI Score") +
+  tm_layout(legend.width = 20,
+            legend.stack = "horizontal") +
+  tm_shape(dat_bin) +
+  tm_polygons(col = "gray99", lwd = 0) +
   tm_shape(st) +
   tm_borders(col = "gray20", lwd = 0.5)
 
@@ -245,6 +249,7 @@ epa_count
 ```
 
 ## Average over time
+## % counties, % pop over time
 
 ```{r}
 yrs <- data.frame(aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = mean),
@@ -269,30 +274,40 @@ ggplot(yrs, aes(x = year, y = avg_rsei, ymin = ci_05, ymax = ci_95)) +
 t.test(pop_tox$rsei.score, pop_tox$year)
 
 
-aggregate(pop_tox$total, by = list(pop_tox$rsei_score_bin), FUN = sum)
-2039297388 / 10
+pop_exp <- data.frame(aggregate(pop_tox$total, by = list(pop_tox$rsei_score_bin,
+                                                         pop_tox$year), FUN = sum)) %>%
+  group_by(Group.2) %>%
+  spread(Group.1, x) %>%
+  mutate(exposed_p = `1` / (`0` + `1`))
+pop_exp$type = "Population"
+names(pop_exp) <- c("year", "not_exp", "exp", "exposed_p", "type")
+
+counties_exp <- data.frame(table(pop_tox$year, pop_tox$rsei_score_bin)) %>%
+  group_by(Var1) %>%
+  spread(Var2, Freq) %>%
+  mutate(exposed_c = `1` / (`0` + `1`))
+counties_exp$type = "Counties"
+names(counties_exp) <- c("year", "not_exp", "exp", "exposed_p", "type")
+
+counties_exp$year <- as.numeric(as.character(counties_exp$year))
+
+exposed <- rbind(counties_exp, pop_exp)
+exposed$exposed_p <- exposed$exposed_p * 100
+#exposed$year <- as.factor(exposed$year)
+
+ggplot(exposed, aes(x = year, y = exposed_p, fill = type, colour = type)) +
+  geom_line(lwd = 1) +
+  scale_color_manual(values=c("#d34841", "#64266F")) +
+  geom_point(shape = 18, cex = 4, aes(x = year, y = exposed_p)) +
+  ylim(0, 100) +
+  xlab("Year") +
+  ylab("% With Risk Potential") +
+  ggtitle("Percent with Water Pollution Risk Potential in U.S., 2011-2020") +
+  theme(legend.title = element_blank(),
+        panel.background = element_rect(fill="gray95"))
+
 
 ```
-#scale_y_continuous(breaks=1:12, labels=month.abb[1:12])+
-  xlab("") + 
-  ylab("") +
-  ggtitle("Total Australian Schizophrenics Born By Month and Year") +
-  theme(
-    plot.title = element_text(color="white",hjust=0,vjust=1, size=rel(2)),
-    plot.background = element_rect(fill="gray20"),
-    panel.background = element_rect(fill="gray20"),
-    panel.border = element_rect(fill=NA,color="gray20", size=0.5, linetype="solid"),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_blank(),
-    axis.ticks = element_blank(), 
-    axis.text = element_text(color="black", size=rel(1.5)),
-    axis.text.y  = element_text(hjust=1),
-    legend.text = element_text(color="black", size=rel(1.3)),
-    legend.background = element_rect(fill="gray20"),
-    legend.position = "bottom",
-    legend.title=element_blank()
-  )
 
 
 ## heat map of time table
@@ -307,8 +322,12 @@ pop_sc <- pop_tox[, c(3, 42)] %>%
                                 rsei.score > 100 & rsei.score <= 1000 ~ "<1000",
                                 rsei.score > 1000 & rsei.score <= 10000 ~ "<10000",
                                 rsei.score > 10000 & rsei.score <= 100000 ~ "<100000",
-                                rsei.score > 100000 ~ ">100000"))
+                                rsei.score > 100000 & rsei.score <= 1000000 ~ "<1000000",
+                                rsei.score > 1000000 ~ ">1000000"))
 
+aggregate(pop_sc$rsei.score, by = list(pop_sc$year, pop_sc$rsei_range), FUN = mean)
+
+table(pop_sc$year, pop_sc$rsei.score > 1000000)
 
 #pop_sc$rsei.score <- log(pop_sc$rsei.score + 0.1)
 #setDT(pop_sc)
@@ -324,14 +343,14 @@ names(tab) <- c("year", "rsei_range", "count")
 #                                        2016, 2017, 2018, 2019, 2020))
 tab$rsei_range <- factor(tab$rsei_range, levels = c("0", "<1", "<10", "<100",
                                                     "<1000", "<10000", "<100000",
-                                                    ">100000"))
+                                                    "<1000000", ">1000000"))
 
 tab$count[tab$rsei_range == "0"] <- NA
 
 tab_0 <- tab %>%
   filter(count < 2000)
-tab_not0 <- tab %>%
-  filter(count >= 2000)
+#tab_not0 <- tab %>%
+#  filter(count >= 2000)
 
 ggplot(tab, aes(year, rsei_range, fill = count)) + 
   #geom_tile(size=0, stat="identity") + 
@@ -340,9 +359,9 @@ ggplot(tab, aes(year, rsei_range, fill = count)) +
   geom_tile(size = 0, stat="identity", aes(fill = count)) +
   geom_text(aes(label = count)) +
   scale_fill_gradientn(colors = viridis_pal(direction = -1, 
-                                            option = "C")(50), 
+                                   option = "C")(50), #colors = c("white", "cyan", "darkcyan"),
                        na.value = "#0a125a", limits = c(0, 277)) +
-  geom_tile(data = tab_not0, fill = "#0a125a") +
+  geom_tile(data = tab_not0, fill = "#0a125a") + #0a125a #darkslategrey
   geom_text(data = tab_not0, aes(label = count), colour = "white") +
   ggtitle("RSEI Scores 2011-2020") +
   xlab("Year") + 
@@ -355,5 +374,10 @@ ggplot(tab, aes(year, rsei_range, fill = count)) +
 
 ```
 
+
+
+```{r}
+
+```
 
 
