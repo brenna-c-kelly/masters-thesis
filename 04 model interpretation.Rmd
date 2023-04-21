@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
+library(INLA)
 ```
 
 # model results
@@ -202,11 +203,34 @@ exp(-0.311989882 + 0.122456617 + -0.151234734) # 0.025 asian*pov
 exp(0.22928288 + 0.29801970 + 0.06321873) # 0.975 asian*pov
 inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_asi_z`)
 
+#x_aia_z
+exp(fixed_y[which(fixed_z$coef == "x_pov_z"), "mean"] + 
+      fixed_y[which(fixed_z$coef == "x_aia_z"), "mean"] + 
+      fixed_y[which(fixed_z$coef == "x_pov_z:x_aia_z"), "mean"]) # mean x_aia_z*pov
+exp(fixed_y[which(fixed_z$coef == "x_pov_z"), "X0.025quant"] +
+      fixed_y[which(fixed_z$coef == "x_aia_z"), "X0.025quant"] + 
+      fixed_y[which(fixed_z$coef == "x_pov_z:x_aia_z"), "X0.025quant"]) # 0.025 x_aia_z*pov
+exp(fixed_y[which(fixed_z$coef == "x_pov_z"), "X0.975quant"] +
+      fixed_y[which(fixed_z$coef == "x_aia_z"), "X0.975quant"] +
+    fixed_y[which(fixed_z$coef == "x_pov_z:x_aia_z"), "X0.975quant"])
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_aia_z`)
+
+1 - inla.pmarginal(0, res$marginals.fixed$x_bla_z)
+inla.pmarginal(0.67, res$marginals.fixed$x_bla_z)
+inla.pmarginal(0.89, res$marginals.fixed$x_bla_z)
+inla.pmarginal(0.99, res$marginals.fixed$x_bla_z)
+
 1 - inla.pmarginal(0, res$marginals.fixed$x_tom_z)
 1 - inla.pmarginal(0, res$marginals.fixed$x_oth_z)
+1 - inla.pmarginal(0, res$marginals.fixed$x_asi_z)
+1 - inla.pmarginal(0, res$marginals.fixed$x_nhp_z)
 inla.pmarginal(0, res$marginals.fixed$x_his_z)
+inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_his_z`)
 inla.pmarginal(0, res$marginals.fixed$x_aia_z)
 inla.pmarginal(0, res$marginals.fixed$x_pov_z)
+inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_bla_z`)
+inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_asi_z`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_oth_z`)
 1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_aia_z`)
 1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_nhp_z`)
 1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_tom_z`)
@@ -420,7 +444,7 @@ exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.025quant"] +
 exp(fixed_y[which(fixed_y$coef == "x_pov_y"), "X0.975quant"] +
       fixed_y[which(fixed_y$coef == "x_bla_y"), "X0.975quant"] +
     fixed_y[which(fixed_y$coef == "x_pov_y:x_bla_y"), "X0.975quant"])
-1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_oth_z`)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_oth_y`)
 
 1 - inla.pmarginal(0, res$marginals.fixed$x_pov_y)
 1 - inla.pmarginal(0, res$marginals.fixed$x_bla_y)
@@ -436,7 +460,10 @@ inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_bla_y`)
 1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_nhp_y`)
 1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_tom_y`)
 1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_oth_y`)
-1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_his_y)
+1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_y:x_his_y`)
+
+
+
 
 ```
 
