@@ -2,6 +2,7 @@
 library(sf)
 library(dplyr)
 library(viridis)
+library(tidyverse)
 library(tidycensus)
 
 # list of variables in acs 5-year file for 2020
@@ -25,6 +26,8 @@ county_vars <- get_acs(geography = "county",
        B02001_007, B02001_008,
        B05010_002, .direction = "up") %>%
   drop_na()
+
+crs(county_vars)
 
 # tidying
 names(county_vars) <- tolower(names(county_vars))

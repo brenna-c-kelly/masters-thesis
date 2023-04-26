@@ -16,8 +16,8 @@ bin <- fitted[1:3108, ]
 # gg
 plot_df <- as.data.frame(res$marginals.fixed)
 
-ggplot(plot_df, aes(x = exp(x_pop_z.x), y = x_pop_z.y))  +
-  geom_line(size = 2) +
+ggplot(plot_df, aes(x = exp(x_blac_z), y = x_pop_z.y))  +
+  geom_line(lwd = 2) +
   scale_x_continuous("Population (binomial, back-transformed)") +
   scale_y_continuous("density") +
   theme_bw()
@@ -82,7 +82,7 @@ pop_tox <- pop_tox %>%
   mutate(mean_epa = ifelse(epa_region == "twenty-five", rsei_mean_epa[which(rsei_mean_epa$Group.1 == "twenty-five"), 2], mean_epa))
 
 
-score_time <- aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$year), FUN = sum)
+score_time <- aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = mean)
 
 bin_time <- aggregate(pop_tox$rsei_cancer_bin, by = list(pop_tox$year), FUN = mean, na.rm = TRUE)
 bin_time$Group.1 <- as.factor(bin_time$Group.1)
@@ -94,12 +94,45 @@ summary(glm(rsei.score.cancer ~ year, data = pop_tox))
 summary(glm(rsei_cancer_bin ~ year, data = pop_tox))
 
 score_time <- aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$epa_region), FUN = mean)
-ggplot(score_time, aes(x = Group.1, y = x, colour = Group.2)) +
+ggplot(score_time, aes(x = Group.1, y = x)) +
   geom_line(cex = 1) +
-  ylim(0, 40000) +
+  ylim(0, 10000) +
   theme_minimal()#+
-  scale_colour_viridis_d(option = "plasma")
-  
+#  scale_colour_viridis_d(option = "plasma")
+names(pop_tox)
+hist(pop_tox$black)
+hist(pop_tox$nhpi)
+
+bins <- pop_tox %>%
+  select(geoid, black, aian, asian, nhpi, other, tom, hisp,
+           black_lc, aian_lc, asian_lc, nhpi_lc, other_lc, tom_lc, hisp_lc) %>%
+  group_by(geoid) %>%
+  gather(c(black, aian, asian, nhpi, other, tom, hisp,
+           black_lc, aian_lc, asian_lc, nhpi_lc, other_lc, tom_lc, hisp_lc),
+         key = geoid)
+
+# tri facilities map
+tri <- read.csv("/Users/brenna/Downloads/EPA_Facility_Registry_Service_-_Toxic_Release_Inventory_(TRI).csv")
+names(tri) <- tolower(names(tri))
+length(unique(tri$pgm_sys_id))
+tri <- tri %>%
+  filter(active_status == "ACTIVE")
+table(tri$active_status)
+d <- st_as_sf(tri, coords = c(1:2))
+head(d)
+tm_shape(st) +
+  tm_polygons(col = "gray95", border.col = "gray10") +
+  tm_shape(d) +
+  tm_dots(col = "red", alpha = 0.15, shape = 18, size = 0.5)
+
+
+
+ggplot(pop_tox, aes(x=black, colour = aian)) + 
+  geom_histogram()
+
+ggplot(pop_tox, aes("aian")) +
+  geom_histogram(binwidth = 0.1)
+
 test <- score_time %>%
   filter(Group.1 == 2013)
 

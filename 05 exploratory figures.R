@@ -17,20 +17,20 @@ pop_tox$geoid <- str_pad(pop_tox$geoid, 5, pad = 0)
 
 geometry <- st_read("data/geometry.shp")
 
-dat <- merge(geometry, pop_tox, by = "geoid", all = TRUE)
+dat <- merge(geometry, pop_tox_20, by = "geoid", all = TRUE)
 
 dat$rsei.score_log <- log(dat$rsei.score)
 
 scores_time <- data.frame(aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = mean),
-                     aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = sd),
-                     aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$year), FUN = mean),
-                     aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$year), FUN = sd),
-                     aggregate(pop_tox$rsei.score.noncancer, by = list(pop_tox$year), FUN = mean),
-                     aggregate(pop_tox$rsei.score.noncancer, by = list(pop_tox$year), FUN = sd)) %>%
+                     aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = sd))#,
+                     #aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$year), FUN = mean),
+                     #aggregate(pop_tox$rsei.score.cancer, by = list(pop_tox$year), FUN = sd),
+                     #aggregate(pop_tox$rsei.score.noncancer, by = list(pop_tox$year), FUN = mean),
+                     #aggregate(pop_tox$rsei.score.noncancer, by = list(pop_tox$year), FUN = sd)) %>%
   select(-c(Group.1, Group.1.2, Group.1.3, Group.1.4, Group.1.5)) %>%
   rename(x)
 
-
+  scores_time
 
 ggplot(data = pop_tox, 
        aes(x = year, y = rsei.score, 
@@ -135,6 +135,8 @@ pop_tox <- pop_tox %>%
                                 state.x %in% epa_regions$`25`$state.code ~ "twenty-five")) %>%
   mutate(epa_region = as.character(epa_region))
 
+
+
 test <- split(pop_tox, pop_tox$epa_region)
 summary(test$ten$rsei.score)
 summary(one$rsei.score)
@@ -192,10 +194,19 @@ g <- g + theme(legend.position = "none")
 g + gghighlight(Var1 == c("01"))
 
 
+yrs <- aggregate(pop_tox$rsei_score_bin, by = list(pop_tox$geoid), FUN = sum)
+names(yrs) <- c("geoid", "count")
+yrs_geog <- merge(geometry, yrs, by = "geoid", all = TRUE)
+
+# number of rsei_bin by county
+tm_shape(yrs_geog) +
+  tm_polygons(col = "count", lwd = 0, style = "cont", palette = "-inferno")
+
+
 # epa region
 tm_shape(dat) +
   tm_polygons(col = "rsei_score_bin", lwd = 0, palette = "Dark2", style = "cat") +
-  tm_facets(by = "year", ncol = 5, nrow = 2) +
+  #tm_facets(by = "year", ncol = 5, nrow = 2) +
   tm_layout(frame = FALSE, frame.lwd = NA, panel.label.bg.color = NA)
 
 year_epa <- aggregate(dat$rsei.score, by = list(dat$epa_region, dat$year), FUN = mean)
@@ -203,6 +214,7 @@ year_epa$Group.1 <- as.factor(year_epa$Group.1)
 pal <- wes_palette("Zissou1", n = 10, type = "continuous")
 head(year_epa)
 names(year_epa) <- c("EPA Region", "Year", "Mean Pollution")
+
 
 g <- ggplot(year_epa, aes(x = `Year`, y = `Mean Pollution`, group = `EPA Region`, colour = `EPA Region`))+#,
                      #group = `Group.1`, fill = as.factor(`Group.1`))) +
@@ -216,8 +228,14 @@ summary(year_epa$x)
 pal_vals <- pal[1:10]
 
 library(wesanderson)
-wes_palettes
+?wes_palettes
 wes_palette()
+
+wes_palette("Royal1")
+
+epa_avg <- dat
+
+
 
 
 

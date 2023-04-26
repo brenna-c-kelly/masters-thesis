@@ -21,7 +21,7 @@ pop_tox$idtime <- 1 + pop_tox$year - min(pop_tox$year)
 
 # glms
 m1 <- glm(rsei_score_bin ~ population_10k_lc +
-            black_lc + aian_lc + pov_lc + epa_region +
+            black_lc + aian_lc + pov_lc + 
             asian_lc + nhpi_lc + 
             other_lc + tom_lc +
             hisp_lc + pov_lc + 
@@ -103,6 +103,7 @@ dat_nb <- poly2nb(geometry)
 nb2INLA("map.adj", dat_nb)
 g <- inla.read.graph(filename = "map.adj")
 
+
 # doubling
 id_space_z <- c(id_space, nothing1) # Binomial
 id_space_y <- c(nothing2, id_space) # Gamma
@@ -173,8 +174,8 @@ f_hg <- outcome.matrix ~
   f(id_space_z, model = "bym2", graph = g) +
   f(id_space_y, model = "bym2", graph = g) + 
   #id_time_z + id_time_y +
-  f(id_time_z, model = "iid") + 
-  f(id_time_y, model = "iid") + 
+  f(id_time_z, model = "rw1") + 
+  f(id_time_y, model = "rw1") + 
   #x_epa_z + x_epa_y +
   # intercepts
   mu_z + mu_y + 
@@ -214,7 +215,7 @@ f_hg <- outcome.matrix ~
 #x_his_z*x_pov_z + x_his_y + x_pov_y - 1
 # poverty
 #x_pov_z + x_pov_y
-
+summary(res)
 res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
             control.compute = list(dic = TRUE, waic = TRUE),
             control.inla= list(int.strategy = "eb"),
@@ -231,6 +232,13 @@ res <- inla(f_hg, family = c("binomial", "gamma"), data = data_hg,
 # no intx; race/pov/gin   10229835.82
 # race*pov, gin           10109090.23
 
+
+table(pop_tox$rsei.score == 0, pop_tox$rsei_score_bin)
+# 145181.02 ar1
+# 144560.49 rw1
+
+plot(aggregate(pop_tox$rsei.score, by = list(pop_tox$year), FUN = mean))
+
 #add redlining? epa region? gini index
 summary(res)
 #151205.86
@@ -244,19 +252,6 @@ summary(res)
 pop_tox_20 <- pop_tox %>%
   filter(year == 2020)
 
-pop_tox_20.nb <- poly2nb(dat, queen = TRUE)
-nb = nb2listw(pop_tox_20.nb, zero.policy = TRUE)
-moran.test(pop_tox_20$rsei.score,
-           listw = nb2listw(pop_tox_20.nb, style = "B", zero.policy = TRUE),
-           alternative = "two.sided",
-           randomisation = TRUE,
-           na.action = na.exclude)
-
-
-moran.mc(pop_tox_20$rsei.score, 
-         listw = nb2listw(pop_tox_20.nb, style = "B", zero.policy = TRUE), 
-         nsim = 999, 
-         alternative = 'greater')
 
 plot(st_geometry(boston), reset = FALSE)
 plot(boston.nb, coords, add = TRUE, col = "gray")

@@ -17,6 +17,8 @@ for(i in 1:length(res$marginals.random$id_space_z)) {
   re_space_z <- rbind(re_space_z, df)
 }
 
+
+
 re_space_y <- data.frame(prob = NA,
                          row_id = NA)
 
@@ -311,6 +313,24 @@ schu$exc_diff
 schu$prob
 schu$prob_y
 
+table(pop_tox$rsei.score < 10, pop_tox$rsei_score_bin)
+
 pop_tox_20_geom <- merge(geometry, pop_tox_20, by = "geoid")
 tm_shape(pop_tox_20_geom) +
   tm_polygons(col = "gray20", border.col = "gray100")
+
+
+pop_tox_20_geom <- pop_tox_20_geom[!st_is_empty(pop_tox_20_geom),,drop=FALSE]
+
+pop_tox_20_geom$rsei_bin <- ifelse(pop_tox_20_geom$rsei.score == 0, 0, 1)
+pop_tox_20_geom$rsei.score_log <- log(pop_tox_20_geom$rsei.score + 1)
+
+table(is.na(pop_tox_20_geom$rsei.score))
+tm_shape(pop_tox_20_geom) +
+  tm_polygons(col = "rsei_bin", lwd = 0, palette = "PuRd", legend.show = FALSE)
+
+tm_shape(pop_tox_20_geom) +
+  tm_polygons(col = "rsei.score_log", lwd = 0, palette = "PuRd", legend.show = FALSE)
+
+summary(pop_tox_20)
+

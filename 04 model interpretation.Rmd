@@ -58,7 +58,7 @@ fx_list
 data.frame(fixed_z[, 1], 
            prob = round(exp(fixed_z[, 2:8] ) / (1 + exp(fixed_z[, 2:8])), 3))
 
-fixed_z
+round(exp(fixed_z$X0.975quant), 2)
 
 # NOT log transformed
 # Gini
@@ -182,6 +182,11 @@ exp(-0.041353502 + 0.038138741 + 0.077950874) # mean oth*pov
 exp(-0.311989882 + -0.003340407 + 0.001418131) # 0.025 oth*pov
 exp(0.22928288 + 0.07961789 + 0.15448362) # 0.975 oth*pov
 1 - inla.pmarginal(0, res$marginals.fixed$`x_pov_z:x_oth_z`)
+
+#AIAN
+exp(-0.041353502 + 0.038138741 + 0.077950874) # mean oth*pov
+exp(-0.311989882 + -0.003340407 + 0.001418131) # 0.025 oth*pov
+exp(0.22928288 + 0.07961789 + 0.15448362) # 0.975 oth*pov
 
 exp(-0.041353502 + 0.108901134 + 0.105493158) # mean tom*pov
 exp(-0.311989882 + -0.054563600 + -0.037914950) # 0.025 tom*pov
@@ -320,6 +325,8 @@ for(i in c(11:17)) {
 }
 intx_list = do.call(rbind, intx_list)
 intx_list
+fixed_y$coef
+round(exp(fixed_y$X0.025quant), 2)
 
 round(res$summary.fixed, 3)
 

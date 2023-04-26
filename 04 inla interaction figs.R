@@ -99,6 +99,7 @@ for(i in z_intx) {
   ## Plots - convert perwhite to factors
   #myx$nonwhite_c <- as.factor(myx$nonwhite_c)
   myx$x_pov_z <- as.factor(myx$x_pov_z)
+  summary(myx$x_pov_z)
   
   summary(myx$theta_fix)
   #races <- c("American Indian/Alaska Native",
@@ -138,11 +139,11 @@ for(i in y_intx) {
   
   ## violent crime coefficient and prediction values (x-axis)
   b1 <- coefs[which(rownames(coefs) == "x_pov_y"), 1]
-  x1 <- seq(-4, 2, length = 100) ## Violent crime
+  x1 <- seq(-3, 3, length = 100) ## Violent crime
   
   ## percent white coefficient and prediction values (colors)
   b2 <- coefs[which(rownames(coefs) == i), 1]
-  x2 <- seq(-4, 2) ## PerWhite
+  x2 <- seq(-3, 3) ## PerWhite
   
   ## interaction coefficient
   b3 <- coefs[which(rownames(coefs) == paste("x_pov_y:", i, sep = "")), 1]
@@ -152,8 +153,8 @@ for(i in y_intx) {
   
   str(myy)
   ## Expected log counts for grid
-  myy$log_theta <- b0 + b1 * myy$x_pov_y + b2 * myy$i +
-    b3 * (myy$x_pov_y * myy$i)
+  myy$log_theta <- exp(b0 + b1 * myy$x_pov_y + b2 * myy$i +
+    b3 * (myy$x_pov_y * myy$i))
   
   myy$theta_fix <- exp(myy$log_theta) / (1 + exp(myy$log_theta))
   
@@ -171,12 +172,12 @@ for(i in y_intx) {
   ## Plot it
   
   #myx$sig <- ifelse(i %in% c("x_bla_y", "x_his_y"), 1, 0.5)
-  race_poverty <- ggline(myy, x = "i", y = "theta_fix", 
+  race_poverty <- ggline(myy, x = "i", y = "log_theta", 
                          col = "x_pov_y", numeric.x.axis = TRUE, 
                          size = 1.5, plot_type = 'l',
                         # alpha = sig,
                          xlab = paste("Percent", i),
-                         ylab = "Change in Risk Potential", alpha = 0.5) +
+                         ylab = "Risk Potential", alpha = 0.5) +
     scale_colour_manual(values = rev(brewer.pal(8, "Spectral")),) +
     labs(color = "Percent Below \nPoverty Line") +
     #geom_hline(yintercept = mean(pop_tox$rsei.score), linetype = "dashed") +
@@ -185,7 +186,6 @@ for(i in y_intx) {
   race_poverty
   figs_y[[i]] <- race_poverty
 }
-figs_y$x_tom_y
 
 ggarrange(figs_y$x_bla_y,
           figs_y$x_aia_y,
@@ -206,11 +206,11 @@ for(i in z_intx) {
   
   ## violent crime coefficient and prediction values (x-axis)
   b1 <- coefs[which(rownames(coefs) == "x_pov_z"), 1]
-  x1 <- seq(-4, 2, length = 100) ## Violent crime
+  x1 <- seq(-3, 3, length = 100) ## Violent crime
   
   ## percent white coefficient and prediction values (colors)
   b2 <- coefs[which(rownames(coefs) == i), 1]
-  x2 <- seq(-4, 2) ## PerWhite
+  x2 <- seq(-3, 3) ## PerWhite
   
   ## interaction coefficient
   b3 <- coefs[which(rownames(coefs) == paste("x_pov_z:", i, sep = "")), 1]

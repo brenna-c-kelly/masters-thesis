@@ -297,7 +297,7 @@ exposed$exposed_p <- exposed$exposed_p * 100
 
 ggplot(exposed, aes(x = year, y = exposed_p, fill = type, colour = type)) +
   geom_line(lwd = 1) +
-  scale_color_manual(values=c("#d34841", "#64266F")) +
+  scale_color_manual(values=c("#E2765A", "#6B1B19")) + #"#64266F", "#d34841"
   geom_point(shape = 18, cex = 4, aes(x = year, y = exposed_p)) +
   ylim(0, 100) +
   xlab("Year") +
@@ -306,6 +306,30 @@ ggplot(exposed, aes(x = year, y = exposed_p, fill = type, colour = type)) +
   theme(legend.title = element_blank(),
         panel.background = element_rect(fill="gray95"))
 
+
+ggplot(counties_exp, aes(x = year, y = exposed_p)) +
+  geom_line(lwd = 1, color = "#6f7fee") +
+  #scale_color_manual(values=c("#E2765A")) + #"#64266F", "#d34841"
+  geom_point(shape = 18, cex = 4, aes(x = year, y = exposed_p), color = "#6f7fee") +
+  xlab("Year") +
+  ylab("% With Risk Potential") +
+  ggtitle("Percent of U.S. Counties with Polluted Water, 2011-2020") +
+  theme(legend.title = element_blank(),
+        panel.background = element_rect(fill="gray95")) +
+  theme_minimal()
+pop_exp$exp_m <- pop_exp$exp / 1000000
+ggplot(pop_exp, aes(x = year, y = exp_m)) +
+  geom_line(lwd = 1, color = "#F21A00") +
+  #scale_color_manual(values=c("#E2765A")) + #"#64266F", "#d34841"
+  geom_point(shape = 18, cex = 4, aes(x = year, y = exp_m), color = "#F21A00") +
+  xlab("Year") +
+  ylab("Population (m)") +
+  ggtitle("U.S. Population with Polluted Water, 2011-2020") +
+  theme(legend.title = element_blank(),
+        panel.background = element_rect(fill="gray95")) +
+  theme_minimal()
+Zissou <- c("#F21A00", "#E1AF00","#EBCC2A","#3B9AB2")
+options(scipen = 999)
 
 ```
 

@@ -3,8 +3,10 @@
 library(tibble)
 # coefficient interpretation
 
+summary(pop_tox)
 
-res
+
+summary(res)
 
 
 
@@ -36,6 +38,8 @@ logit2prob <- function(logit){
   prob <- odds / (1 + odds)
   return(prob)
 }
+
+
 
 logit2prob(res$summary.fixed)
 
@@ -183,9 +187,9 @@ intx_list
 
 fixed_list <- rbind(fx_list, intx_list)
 fixed_list
-fixed_z
+round(fixed_z$mean, 2)
 
-
+fx_list
 
 
 
@@ -219,17 +223,50 @@ hist(pop_tox$pov)
 hist(log(pop_tox$pov))
 
 
-logit_seq <- seq(-4, 4, by = 1)
-prob_seq <- round(logit2prob(logit_seq), 3)
-raw <- exp(logit_seq + log(mean(pop_tox$other)))
-df <- data.frame(Logit = logit_seq,
+logit2prob <- function(logit){
+  odds <- exp(logit)
+  prob <- odds / (1 + odds)
+  return(prob)
+} # convert logit to probability
+
+logit_seq <- seq(-3, 3, by = 1) # range of logit
+prob_seq <- round(logit2prob(logit_seq), 3) # apply fx to range
+raw <- exp(logit_seq + log(mean(pop_tox$nhpi))) # get variable distribution
+df <- data.frame(Logit = logit_seq, # put it all together
                  Probability = prob_seq,
-                 Raw = raw)
-df
+                 Raw = raw,
+                 race = "nhpi")
+names(df) <-c("Log Unit Change", "AIAN", "Black",
+                "Asian", "Other", "Two or More", "Hispanic",
+                "NHPI")
+
+df_1 <- cbind(df_1, df_2)
+df_1 <- df_1[, c(1, 3, 5, 7, 9, 11, 13, 17)]
+names(df_1) <-c("Log Unit Change", "AIAN", "Black",
+                "Asian", "Other", "Two or More", "Hispanic",
+                "NHPI")
+df_1
+#df_1 <- df_1[, c(1:4, 7:8, 11:12, 19:20, 23:24, 27:28)]
+#pop_tox$
+names(df_1) <- c("Log Unit Change", "prob", "AIAN", "tx1", "Black", "tx2",
+                 "Asian", "tx3", "Other", "tx4", "Two or More", "tx5", "Hispanic", "tx6")
+df_1 <- df_1[, c(1, 3, 5, 7, 9, 11, 13)]
+
+#df_1 <- df[-c(6:35), ]
+
+test <- df %>%
+  spread(race, Probability)
 
 summary(pop_tox$other)
 res$summary.fixed
 
-
-
-
+head(pop_tox$name)
+tops <- pop_tox %>%
+  filter(name %in% c("Clay County, Florida",
+                     "Salt Lake County, Utah",
+                     "Montgomery County, Virginia",
+                     "Catawba County, North Carolina",
+                     "Harris County, Texas"))
+one <- tops %>%
+  filter(name == "Harris County, Texas")
+sum(one$rsei.score) / sum(pop_tox$rsei.score)
