@@ -1,5 +1,9 @@
 
+library(sf)
+library(INLA)
+library(tmap)
 library(purrr)
+library(stringr)
 library(wesanderson)
 
 mean(res$summary.random$id_space_z[, "mean"], na.rm = TRUE)
@@ -7,6 +11,11 @@ mean(res$summary.random$id_space_z[, "mean"], na.rm = TRUE)
 
 re_space_z <- data.frame(prob = NA,
                          row_id = NA)
+
+inla.pmarginal(1, res$marginals.random$id_space_z[[3100]])
+
+1 - inla.pmarginal(mean(res$summary.random$id_space_z[, "mean"], na.rm = TRUE), 
+               res$marginals.random$id_space_z[[3100]])
 
 for(i in 1:length(res$marginals.random$id_space_z)) {
   id = round(i, 0)
@@ -17,7 +26,7 @@ for(i in 1:length(res$marginals.random$id_space_z)) {
   re_space_z <- rbind(re_space_z, df)
 }
 
-
+head(re_space_z)
 
 re_space_y <- data.frame(prob = NA,
                          row_id = NA)
@@ -106,8 +115,8 @@ names(re_space_z)
 pop_tox_1yr <- pop_tox %>%
   filter(year == 2020)
 
-space_z <- merge(pop_tox_1yr, re_space_z, by.x = "idarea", by.y = "row_id")
-space_z <- merge(geometry, space_z, by = "geoid")
+space_z_1 <- merge(pop_tox_1yr, re_space_z, by.x = "idarea", by.y = "row_id")
+space_z <- merge(geometry, space_z_1, by = "geoid")
 space_z$exceedance <- case_when(space_z$prob > 0.97 ~ "Very High, >0.97",
                                 space_z$prob > 0.89 ~ "High, >0.89",
                                 space_z$prob > 0.67 ~ "Moderate, >0.67",
@@ -137,6 +146,11 @@ viridis(20, option = "C")
 "#C5407EFF" "#D14E72FF" "#DD5E66FF" "#E76E5BFF" "#EF7F4FFF" "#F79044FF" "#FBA238FF" "#FEB72DFF" "#FDCB26FF"
 [19] "#F7E225FF" "#F0F921FF"
 
+tm_shape(space_z) +
+  tm_polygons(col = "exceedance", style = "cont")
+tm_shape(space_y) +
+  tm_polygons(col = "exceedance", style = "cont")
+
 z <- tm_shape(space_z) +
   tm_polygons(col = "exceedance", lwd = 0, style = "cont", palette = t, #midpoint = 0.95,
               title = "Credibility Being Polluted \nMore Than Average (Bin)")
@@ -147,9 +161,9 @@ tmap_arrange(z, y)
 #dev.off()
 
 space_y_no_geom <- st_drop_geometry(space_y)
-space_y_no_geom <- space_y_no_geom[, c(1, 50:53)]
+space_y_no_geom <- space_y_no_geom[, c(1, 63:66)]
 names(space_y_no_geom) <- c("geoid", "idarea1", "idtime", "prob_y", "exceedance_y")
-space_re <- cbind(space_z, space_y_no_geom)
+space_re <- merge(space_z, space_y_no_geom, by = "geoid")
 
 space_re$exc_diff <- paste(space_re$exceedance, space_re$exceedance_y)
 table(space_re$exc_diff)
@@ -253,12 +267,13 @@ biv <- c("#f11b07", "#bc1e19", "#2c173c", "#001142",
                      "#cb96b3", "#aa85b2", "#4857be", "#4860e6",
                      "#c1ccfb", "#a8b0f1", "#6f7fee", "#4e68f9")
                   
-space_y$exc_diff <- factor(space_y$exceedance, levels = c("Low, <0.67 Very High, >0.97",
+space_re$exc_diff <- factor(space_re$exc_diff, levels = c("Low, <0.67 Very High, >0.97",
                                                           "Moderate, >0.67 Very High, >0.97",
                                                           "High, >0.89 Very High, >0.97",
                                                           "Very High, >0.97 Very High, >0.97", #
                                                           "Low, <0.67 High, >0.89",
-                                                          "Moderate, >0.67 High, >0.89",# missing high high
+                                                          "Moderate, >0.67 High, >0.89",
+                                                          "High, >0.89 High, >0.89",# missing high high
                                                           "Very High, >0.97 High, >0.89", #
                                                           "Low, <0.67 Moderate, >0.67",
                                                           "Moderate, >0.67 Moderate, >0.67",
@@ -276,6 +291,7 @@ tm_shape(space_re) +
                                                                    "Very High, >0.97 Very High, >0.97" = "#e40301", #
                                                                    "Low, <0.67 High, >0.89" = "#4dbdca",
                                                                    "Moderate, >0.67 High, >0.89" = "#898483",# missing high high
+                                                                   "High, >0.89 High, >0.89" = "#e7633f",
                                                                    "Very High, >0.97 High, >0.89" = "#e14d2c", #
                                                                    "Low, <0.67 Moderate, >0.67" = "#9bd4d9",
                                                                    "Moderate, >0.67 Moderate, >0.67" = "#deb99e",
@@ -287,10 +303,12 @@ tm_shape(space_re) +
                                                                    "Very High, >0.97 Low, <0.67" = "#eb9b4f"),
               #title = "Credibility Amount Polluted \nMore Than Average (Gam)",
               ) + #legend.show = F
-  tm_shape(st) +
+  #tm_shape(st) +
   tm_layout(legend.outside = TRUE, legend.outside.size = 0.5) +
   tm_borders(col = "gray50", lwd = 0.5)
-
+names(space_re)
+test <- space_re[, c(1:5, 7:19, 55:73)]
+st_write(test, "data/space_re.shp")
 
 flint <- space_re %>%
   filter(geoid == "26049")
